@@ -1,0 +1,78 @@
+# One box runs everything: API, PostgreSQL, converter, scheduler and the tunnel.
+# The tunnel is outbound-only, so no port is published to the internet — see
+# docs/adr/0001-self-hosted-vps-behind-cloudflare-tunnel.md.
+
+name: wikindle
+
+x-app: &app
+  image: ghcr.io/derrabbyt/wikindle:${WIKINDLE_TAG:-latest}
+  build:
+    context: ./apps/server
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+  environment:
+    WIKINDLE_DATABASE_URL: postgresql://wikindle:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/wikindle
+    WIKINDLE_LANGUAGE: ${WIKINDLE_LANGUAGE:-en}
+    WIKINDLE_RESEND_API_KEY: ${WIKINDLE_RESEND_API_KEY:-}
+    WIKINDLE_SENDER_ADDRESS: ${WIKINDLE_SENDER_ADDRESS:?set WIKINDLE_SENDER_ADDRESS}
+    WIKINDLE_SENDER_NAME: ${WIKINDLE_SENDER_NAME:-wikindle}
+    WIKINDLE_PUBLIC_URL: ${WIKINDLE_PUBLIC_URL:?set WIKINDLE_PUBLIC_URL}
+    WIKINDLE_CONVERTER_VERSION: ${WIKINDLE_CONVERTER_VERSION:-1}
+  volumes:
+    - epub:/var/lib/wikindle/epub
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wikindle
+      POSTGRES_DB: wikindle
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wikindle -d wikindle"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    <<: *app
+    # Reached only through the tunnel; deliberately not published to the host.
+    expose:
+      - "8000"
+
+  scheduler:
+    <<: *app
+    command: ["python", "-m", "wikindle", "scheduler"]
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN}"]
+    depends_on:
+      - api
+
+  # Runs nightly and exits; `docker compose run --rm backup` for an ad-hoc dump.
+  # Neon used to do this invisibly and now nobody does — see ADR 0001.
+  backup:
+    image: postgres:17-alpine
+    profiles: ["backup"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    command: >-
+      sh -c 'pg_dump -h db -U wikindle -d wikindle
+             | gzip > /backups/wikindle-$$(date +%%Y%%m%%d-%%H%%M).sql.gz'
+
+volumes:
+  pgdata:
+  epub:

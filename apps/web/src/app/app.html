@@ -1,50 +1,130 @@
 <main class="page">
   <section class="card">
-    <div class="eyebrow">Cloudflare full-stack demo</div>
+    <div class="eyebrow">wikindle</div>
 
-    <h1>Angular + Worker + PostgreSQL</h1>
+    <h1>One Wikipedia article a day, on your Kindle</h1>
 
     <p class="intro">
-      This page is hosted on Cloudflare Pages. The records below are loaded
-      from a Cloudflare Worker connected to PostgreSQL through Hyperdrive.
+      Every morning, one well-written Wikipedia article — drawn from the
+      featured and good article pool, never a stub — converted to a properly
+      formatted EPUB and delivered to your Kindle.
     </p>
 
-    <div class="status-row">
-      <span class="status-dot" aria-hidden="true"></span>
-      <span>Frontend is online</span>
+    <form class="form" (ngSubmit)="subscribe()">
+      <label for="kindle">
+        Your Send to Kindle address
+        <small
+          >Ends in <code>&#64;kindle.com</code>. This is
+          <strong>not</strong> your Amazon account email — find it under Amazon
+          → Content and Devices → Preferences → Personal Document
+          Settings.</small
+        >
+      </label>
+      <input
+        id="kindle"
+        name="kindle"
+        type="email"
+        required
+        autocomplete="off"
+        placeholder="yourname@kindle.com"
+        [ngModel]="kindleAddress()"
+        (ngModelChange)="kindleAddress.set($event)"
+      />
+
+      <label for="contact">
+        Your normal email address
+        <small
+          >For the confirmation link, and so we can warn you if articles stop
+          arriving. Your Kindle cannot receive ordinary mail, so we need a
+          mailbox you actually read.</small
+        >
+      </label>
+      <input
+        id="contact"
+        name="contact"
+        type="email"
+        required
+        autocomplete="email"
+        placeholder="you@example.com"
+        [ngModel]="contactEmail()"
+        (ngModelChange)="contactEmail.set($event)"
+      />
+
+      <button type="submit" [disabled]="signupBusy()">
+        {{ signupBusy() ? "Sending…" : "Send me an article a day" }}
+      </button>
+
+      @if (signupOutcome(); as outcome) {
+        <p
+          class="message"
+          [class.error]="outcome.kind === 'error'"
+          [attr.role]="outcome.kind === 'error' ? 'alert' : 'status'"
+        >
+          {{ outcome.message }}
+        </p>
+      }
+    </form>
+
+    <div class="note">
+      <strong>One thing Amazon makes you do yourself.</strong> After confirming,
+      you must add our sending address to your Approved Personal Document E-mail
+      List. Until you do, Amazon discards our mail without telling either of us.
+      The confirmation page spells out exactly where to click.
     </div>
-
-    @if (loading()) {
-      <div class="message" role="status">Loading records from PostgreSQL…</div>
-    } @else if (error()) {
-      <div class="message error" role="alert">
-        {{ error() }}
-        <button type="button" (click)="loadItems()">Retry</button>
-      </div>
-    } @else {
-      <div class="result-header">
-        <h2>Database records</h2>
-        <button type="button" (click)="loadItems()">Refresh</button>
-      </div>
-
-      <ul class="items">
-        @for (item of items(); track item.id) {
-          <li>
-            <div>
-              <strong>{{ item.name }}</strong>
-              <span>Record #{{ item.id }}</span>
-            </div>
-
-            <time [attr.datetime]="item.created_at">
-              {{ item.created_at | date: "medium" }}
-            </time>
-          </li>
-        } @empty {
-          <li>No database records were returned.</li>
-        }
-      </ul>
-
-      <p class="source">{{ source() }}</p>
-    }
   </section>
+
+  <section class="card">
+    <h2>Want one right now?</h2>
+    <p class="intro">
+      Already subscribed? Get an extra article immediately — at random, or paste
+      any Wikipedia link, in any language.
+    </p>
+
+    <form class="form" (ngSubmit)="sendExtra()">
+      <label for="extra-kindle">Your Send to Kindle address</label>
+      <input
+        id="extra-kindle"
+        name="extraKindle"
+        type="email"
+        required
+        autocomplete="off"
+        placeholder="yourname@kindle.com"
+        [ngModel]="extraAddress()"
+        (ngModelChange)="extraAddress.set($event)"
+      />
+
+      <label for="extra-url">
+        Wikipedia link <small>Optional — leave blank to be surprised.</small>
+      </label>
+      <input
+        id="extra-url"
+        name="extraUrl"
+        type="url"
+        autocomplete="off"
+        placeholder="https://en.wikipedia.org/wiki/Kintsugi"
+        [ngModel]="extraUrl()"
+        (ngModelChange)="extraUrl.set($event)"
+      />
+
+      <button type="submit" [disabled]="extraBusy()">
+        {{ extraBusy() ? "Sending…" : "Send it to my Kindle" }}
+      </button>
+
+      @if (extraOutcome(); as outcome) {
+        <p
+          class="message"
+          [class.error]="outcome.kind === 'error'"
+          [attr.role]="outcome.kind === 'error' ? 'alert' : 'status'"
+        >
+          {{ outcome.message }}
+        </p>
+      }
+    </form>
+  </section>
+
+  <footer class="footer">
+    Article text comes from Wikipedia and is available under CC BY-SA 4.0. We
+    store your two email addresses and a log of what we sent you, and nothing
+    else.
+  </footer>
 </main>
