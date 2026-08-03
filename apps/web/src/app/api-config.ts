@@ -1,0 +1,1 @@
+export const API_BASE_URL = "https://cf-angular-demo-api.florian-rammerstorfer1.workers.dev";

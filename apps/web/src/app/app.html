@@ -1,0 +1,50 @@
+<main class="page">
+  <section class="card">
+    <div class="eyebrow">Cloudflare full-stack demo</div>
+
+    <h1>Angular + Worker + PostgreSQL</h1>
+
+    <p class="intro">
+      This page is hosted on Cloudflare Pages. The records below are loaded
+      from a Cloudflare Worker connected to PostgreSQL through Hyperdrive.
+    </p>
+
+    <div class="status-row">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>Frontend is online</span>
+    </div>
+
+    @if (loading()) {
+      <div class="message" role="status">Loading records from PostgreSQL…</div>
+    } @else if (error()) {
+      <div class="message error" role="alert">
+        {{ error() }}
+        <button type="button" (click)="loadItems()">Retry</button>
+      </div>
+    } @else {
+      <div class="result-header">
+        <h2>Database records</h2>
+        <button type="button" (click)="loadItems()">Refresh</button>
+      </div>
+
+      <ul class="items">
+        @for (item of items(); track item.id) {
+          <li>
+            <div>
+              <strong>{{ item.name }}</strong>
+              <span>Record #{{ item.id }}</span>
+            </div>
+
+            <time [attr.datetime]="item.created_at">
+              {{ item.created_at | date: "medium" }}
+            </time>
+          </li>
+        } @empty {
+          <li>No database records were returned.</li>
+        }
+      </ul>
+
+      <p class="source">{{ source() }}</p>
+    }
+  </section>
+</main>
