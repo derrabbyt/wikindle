@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     #: Typed into Amazon Approved Sender Lists by hand, so it can never change
     #: without silently cutting off every existing Subscriber. See
     #: docs/adr/0007-sending-domain.md.
-    sender_address: str = "read@send.wikindle.xyz"
+    sender_address: str = "read@wikindle.xyz"
     sender_name: str = "wikindle"
     public_url: str = "https://api.wikindle.xyz"
 
