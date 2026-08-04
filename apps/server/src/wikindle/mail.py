@@ -31,6 +31,14 @@ class Message:
     text: str
     attachment: Path | None = None
     attachment_name: str | None = None
+    #: An HTML alternative. Text-only mail carrying a single bare link is close
+    #: to the platonic shape of spam, and links survive rendering better as
+    #: anchors than as URLs a client has to notice and linkify itself.
+    html: str | None = None
+    reply_to: str | None = None
+    #: Extra SMTP headers — notably List-Unsubscribe, which mailbox providers
+    #: read as a signal that the sender is well behaved.
+    headers: dict[str, str] = field(default_factory=dict)
 
 
 class Mailer(Protocol):
@@ -78,6 +86,12 @@ class ResendMailer:
             "subject": message.subject,
             "text": message.text,
         }
+        if message.html:
+            payload["html"] = message.html
+        if message.reply_to:
+            payload["reply_to"] = message.reply_to
+        if message.headers:
+            payload["headers"] = dict(message.headers)
 
         if message.attachment is not None:
             content = Path(message.attachment).read_bytes()

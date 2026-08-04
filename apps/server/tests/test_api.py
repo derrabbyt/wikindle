@@ -247,3 +247,84 @@ def test_a_dead_database_gives_a_fast_503_not_a_hang(tmp_path):
         assert "unavailable" in response.json()["detail"].lower()
     finally:
         api._pool = None
+
+
+def test_confirmation_link_is_short_enough_to_survive_email_encoding(context):
+    """Quoted-printable folds plain-text lines at 76 characters. A longer link
+    is broken across a line, where many clients will not linkify it."""
+    client, repository, mailer = context
+    client.post(
+        "/api/subscribe",
+        json={"kindle_address": "me@kindle.com", "contact_email": "me@example.com"},
+    )
+
+    body = mailer.sent[0].text
+    link = next(line for line in body.splitlines() if line.startswith("http"))
+    assert len(link) < 76, f"confirmation link is {len(link)} chars and will wrap"
+
+
+def test_confirmation_mail_is_multipart_and_carries_unsubscribe_headers(context):
+    """A text-only message with one bare link, from a new domain and with no
+    List-Unsubscribe, is the shape mailbox providers file as spam."""
+    client, repository, mailer = context
+    client.post(
+        "/api/subscribe",
+        json={"kindle_address": "me@kindle.com", "contact_email": "me@example.com"},
+    )
+
+    message = mailer.sent[0]
+    assert message.html and "<a" in message.html
+    assert message.reply_to
+    assert message.headers["List-Unsubscribe"].startswith("<http")
+    assert message.headers["List-Unsubscribe-Post"] == "List-Unsubscribe=One-Click"
+
+
+def unsubscribe_link_for(config, address="me@kindle.com"):
+    from wikindle.tokens import unsubscribe_token
+
+    return unsubscribe_token(address, config.secret_key)
+
+
+def test_one_click_unsubscribe_works_and_rejects_a_forged_token(context, tmp_path):
+    client, repository, _ = context
+    subscribe_and_confirm(client, repository)
+    config = Settings(
+        database_url="postgresql://unused", storage_dir=tmp_path,
+        sender_address="kindle@wikindle.test", public_url="https://wikindle.test",
+    )
+    good = unsubscribe_link_for(config)
+
+    forged = client.post("/unsubscribe?a=me@kindle.com&t=deadbeef")
+    assert forged.status_code == 404
+    assert repository.subscriber_by_kindle_address("me@kindle.com").status == "active"
+
+    accepted = client.post(f"/unsubscribe?a=me@kindle.com&t={good}")
+    assert accepted.status_code == 200
+    assert repository.subscriber_by_kindle_address("me@kindle.com").status == "unsubscribed"
+
+
+def test_unsubscribe_link_in_a_browser_shows_a_page(context, tmp_path):
+    client, repository, _ = context
+    subscribe_and_confirm(client, repository)
+    config = Settings(
+        database_url="postgresql://unused", storage_dir=tmp_path,
+        sender_address="kindle@wikindle.test", public_url="https://wikindle.test",
+    )
+
+    page = client.get(f"/unsubscribe?a=me@kindle.com&t={unsubscribe_link_for(config)}")
+
+    assert page.status_code == 200
+    assert "Unsubscribed" in page.text
+
+
+def test_an_unknown_address_with_a_valid_token_does_not_leak(context, tmp_path):
+    """Answering 'not found' would confirm which addresses are subscribed."""
+    client, _, _ = context
+    config = Settings(
+        database_url="postgresql://unused", storage_dir=tmp_path,
+        sender_address="kindle@wikindle.test", public_url="https://wikindle.test",
+    )
+    token = unsubscribe_link_for(config, "stranger@kindle.com")
+
+    response = client.post(f"/unsubscribe?a=stranger@kindle.com&t={token}")
+    assert response.status_code == 200

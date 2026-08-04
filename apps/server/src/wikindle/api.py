@@ -31,6 +31,7 @@ from wikindle.services.ondemand import (
 )
 from wikindle.services.subscriptions import AlreadyActive, SubscriptionService
 from wikindle.sources.wikipedia import InvalidArticleUrl
+from wikindle.tokens import verify_unsubscribe_token
 
 log = logging.getLogger(__name__)
 
@@ -196,14 +197,17 @@ def create_app() -> FastAPI:
 
     @app.get("/confirm", response_class=HTMLResponse)
     def confirm(
-        token: str,
         repository: Annotated[Repository, Depends(get_repository)],
         mailer: Annotated[Mailer, Depends(get_mailer)],
         config: Annotated[Settings, Depends(get_settings)],
+        t: str | None = None,
+        token: str | None = None,
     ):
+        # `t` keeps the URL short enough to survive quoted-printable folding;
+        # `token` is still accepted for links sent before that change.
         service = SubscriptionService(repository, config, mailer)
         try:
-            subscriber = service.confirm(token)
+            subscriber = service.confirm(t or token or "")
         except LookupError:
             return HTMLResponse(
                 _page("Link not recognised", "That confirmation link is unknown or "
@@ -211,6 +215,49 @@ def create_app() -> FastAPI:
                 status_code=404,
             )
         return HTMLResponse(_confirmed_page(subscriber, config))
+
+    def _revoke(repository: Repository, address: str, token: str, config: Settings) -> bool:
+        if not verify_unsubscribe_token(address, token, config.secret_key):
+            return False
+        subscriber = repository.subscriber_by_kindle_address(address.strip().lower())
+        if subscriber is not None:
+            repository.unsubscribe(subscriber.id)
+        # An unknown address still counts as success: the caller proved control
+        # of the link, and saying "not found" would leak who is subscribed.
+        return True
+
+    @app.get("/unsubscribe", response_class=HTMLResponse)
+    def unsubscribe_via_link(
+        a: str,
+        t: str,
+        repository: Annotated[Repository, Depends(get_repository)],
+        config: Annotated[Settings, Depends(get_settings)],
+    ):
+        if not _revoke(repository, a, t, config):
+            return HTMLResponse(
+                _page("Link not recognised", "<p>That unsubscribe link is not valid.</p>"),
+                status_code=404,
+            )
+        return HTMLResponse(
+            _page(
+                "Unsubscribed",
+                "<p>No more articles will be sent. Nothing else is needed — you "
+                "may want to remove our address from your Amazon approved list "
+                "as well, but that is up to you.</p>",
+            )
+        )
+
+    @app.post("/unsubscribe")
+    def unsubscribe_one_click(
+        a: str,
+        t: str,
+        repository: Annotated[Repository, Depends(get_repository)],
+        config: Annotated[Settings, Depends(get_settings)],
+    ):
+        """The target of List-Unsubscribe-Post, which mail clients POST to."""
+        if not _revoke(repository, a, t, config):
+            return _error(404, "That unsubscribe link is not valid.")
+        return {"status": "unsubscribed"}
 
     @app.post("/api/unsubscribe")
     def unsubscribe(

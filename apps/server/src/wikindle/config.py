@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     #: quota and Wikimedia, not the Subscriber — see ADR 0005.
     on_demand_daily_limit: int = 5
 
+    #: Signs one-click unsubscribe links. Changing it invalidates every link
+    #: already sitting in somebody's inbox, so set it once and leave it.
+    secret_key: str = "insecure-development-secret"
+
     resend_api_key: str = ""
     #: Typed into Amazon Approved Sender Lists by hand, so it can never change
     #: without silently cutting off every existing Subscriber. See
