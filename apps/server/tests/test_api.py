@@ -328,3 +328,20 @@ def test_an_unknown_address_with_a_valid_token_does_not_leak(context, tmp_path):
 
     response = client.post(f"/unsubscribe?a=stranger@kindle.com&t={token}")
     assert response.status_code == 200
+
+
+def test_the_confirmation_page_links_straight_to_amazons_settings(context):
+    """The approved-sender step is the biggest drop-off; making people navigate
+    four levels of Amazon's account menu unaided loses some of them."""
+    client, repository, _ = context
+    client.post(
+        "/api/subscribe",
+        json={"kindle_address": "me@kindle.com", "contact_email": "me@example.com"},
+    )
+    token = repository.subscriber_by_kindle_address("me@kindle.com").confirm_token
+
+    page = client.get(f"/confirm?t={token}").text
+
+    assert "hz/mycd/myx" in page
+    assert ":~:text=" not in page, "text fragments are Chromium-only and fail on a translated page"
+    assert "amazon.de" in page, "non-US readers need to know to swap the domain"

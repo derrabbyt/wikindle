@@ -391,6 +391,9 @@ def _page(heading: str, body: str) -> str:
         ".addr code{font-size:1.05rem;padding:.5em .7em}"
         "button{font:inherit;padding:.5em .9em;border:0;border-radius:.4em;"
         "background:#18202a;color:#fff;cursor:pointer}"
+        "a.button{display:inline-block;padding:.6em 1em;background:#18202a;"
+        "color:#fff;text-decoration:none;border-radius:.4em;font-weight:600}"
+        ".muted{color:#6d6455;font-size:.9rem}"
         "#copied{color:#1d7a4c;font-size:.9rem}</style>"
         f"<h1>{heading}</h1>{body}"
     )
@@ -422,10 +425,15 @@ def _confirmed_page(subscriber: Subscriber, config: Settings) -> str:
     return _page(
         "You're subscribed",
         "<p><strong>One step left, and without it nothing will arrive.</strong></p>"
-        "<p>Amazon only accepts documents from addresses you have approved. Open "
-        "Amazon → Account &amp; Lists → Content and Devices → Preferences → "
-        "Personal Document Settings, and add this address to your "
-        "<em>Approved Personal Document E-mail List</em>:</p>"
+        "<p>Amazon only accepts documents from addresses you have approved. "
+        f'<a class="button" href="{config.amazon_settings_url}">Open your '
+        "Personal Document Settings</a></p>"
+        "<p class=\"muted\">On a non-US account, swap <code>amazon.com</code> in "
+        "that link for your own — <code>amazon.de</code>, <code>amazon.co.uk</code> "
+        "and so on. If it does not land in the right place: Account &amp; Lists → "
+        "Content and Devices → Preferences → Personal Document Settings.</p>"
+        "<p>Add this address to your <em>Approved Personal Document E-mail "
+        "List</em>:</p>"
         + _copyable(config.sender_address)
         + f"<p>Until you do, mail to <code>{subscriber.kindle_address}</code> is "
         "discarded silently — Amazon sends no bounce, so we cannot tell that it "

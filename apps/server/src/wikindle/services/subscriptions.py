@@ -165,9 +165,13 @@ class SubscriptionService:
             "You are subscribed. One step is left, and without it nothing will\n"
             "arrive at all.\n\n"
             "Amazon only accepts documents from addresses you have approved.\n"
-            "Open Amazon, then Account & Lists → Content and Devices →\n"
-            "Preferences → Personal Document Settings, and add this address to\n"
-            "your Approved Personal Document E-mail List:\n\n"
+            "Open your Personal Document Settings:\n\n"
+            f"{self._settings.amazon_settings_url}\n\n"
+            "On a non-US account, swap amazon.com in that link for your own —\n"
+            "amazon.de, amazon.co.uk and so on. If it does not land in the right\n"
+            "place: Account & Lists → Content and Devices → Preferences →\n"
+            "Personal Document Settings.\n\n"
+            "Add this address to your Approved Personal Document E-mail List:\n\n"
             f"    {self._settings.sender_address}\n\n"
             f"Until you do, everything we send to {kindle_address} is discarded\n"
             "silently. Amazon issues no bounce, so neither you nor we can tell\n"
@@ -181,10 +185,16 @@ class SubscriptionService:
             f"""
             <p>You are subscribed. <strong>One step is left, and without it
             nothing will arrive at all.</strong></p>
-            <p>Amazon only accepts documents from addresses you have approved.
-            Open Amazon, then Account &amp; Lists → Content and Devices →
-            Preferences → Personal Document Settings, and add this address to
-            your <em>Approved Personal Document E-mail List</em>:</p>
+            <p>Amazon only accepts documents from addresses you have approved.</p>
+            <p><a class="button" href="{self._settings.amazon_settings_url}">Open
+            your Personal Document Settings</a></p>
+            <p class="muted">On a non-US account, swap <code>amazon.com</code> in
+            that link for your own — <code>amazon.de</code>,
+            <code>amazon.co.uk</code> and so on. If it does not land in the right
+            place: Account &amp; Lists → Content and Devices → Preferences →
+            Personal Document Settings.</p>
+            <p>Add this address to your <em>Approved Personal Document E-mail
+            List</em>:</p>
             <p><code>{self._settings.sender_address}</code></p>
             <p>Until you do, everything we send to <code>{kindle_address}</code>
             is discarded silently. Amazon issues no bounce, so neither you nor we
