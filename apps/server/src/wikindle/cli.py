@@ -4,25 +4,30 @@
     python -m wikindle build         # evening: build the Editions buffer
     python -m wikindle send          # 04:00 UTC: fan today's Edition out
     python -m wikindle scheduler     # all of the above, on a loop
+
+    python -m wikindle send-test --to you@kindle.com   # smoke test, no database
 """
 from __future__ import annotations
 
 import argparse
 import logging
 import sys
+import tempfile
 import time
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 import psycopg
 import requests
 
 from wikindle.config import Settings, settings as load_settings
+from wikindle.convert import convert_article
 from wikindle.convert.pipeline import USER_AGENT
-from wikindle.mail import Mailer, RecordingMailer, ResendMailer
+from wikindle.mail import Mailer, Message, RecordingMailer, ResendMailer
 from wikindle.pool import sync_pool
 from wikindle.repository import PostgresRepository
 from wikindle.services.conversions import ConversionService
-from wikindle.services.editions import EditionService
+from wikindle.services.editions import EditionService, daily_body, epub_filename
 
 log = logging.getLogger("wikindle")
 
@@ -88,6 +93,52 @@ def command_send(config: Settings, on: date | None = None) -> int:
     return 1 if report.missing_edition else 0
 
 
+#: Short, well-illustrated, and pleasant to find on a device you are testing.
+DEFAULT_TEST_ARTICLE = "https://en.wikipedia.org/wiki/Kintsugi"
+
+
+def command_send_test(config: Settings, to: str, url: str | None = None) -> int:
+    """Convert one article and mail it, touching no database.
+
+    The whole chain except the schedule: fetch, convert, attach, hand to Resend,
+    Amazon, device. Deliberately dependency-free so it can be run from a laptop
+    before any infrastructure exists, and again after every deploy.
+    """
+    url = url or DEFAULT_TEST_ARTICLE
+    if not config.resend_api_key:
+        log.error("no WIKINDLE_RESEND_API_KEY set — nothing would actually be sent")
+        return 1
+
+    mailer = _mailer(config)
+
+    with tempfile.TemporaryDirectory(prefix="wikindle-test-") as scratch:
+        result = convert_article(url, Path(scratch) / "test.epub", session=_session())
+        log.info(
+            "converted %r: %d KB, %d words, %d images (%d missing)",
+            result.title, result.epub_bytes // 1024, result.word_count,
+            result.images_kept, result.images_missing,
+        )
+
+        provider_id = mailer.send(
+            Message(
+                to=to,
+                subject=result.title,
+                text=daily_body(result.title, result.source_url),
+                attachment=result.epub_path,
+                attachment_name=epub_filename(result.title),
+            )
+        )
+
+    log.info("handed to the provider as %s, from %s", provider_id, config.sender_address)
+    log.info(
+        "if nothing arrives, %s is almost certainly missing from the Approved "
+        "Personal Document E-mail List on the Amazon account owning %s — "
+        "Amazon discards it silently",
+        config.sender_address, to,
+    )
+    return 0
+
+
 def command_scheduler(config: Settings) -> int:
     """Run the jobs on a loop, checking once a minute.
 
@@ -125,9 +176,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser = argparse.ArgumentParser(prog="wikindle")
     parser.add_argument(
-        "command", choices=["sync-pool", "build", "send", "scheduler"]
+        "command", choices=["sync-pool", "build", "send", "send-test", "scheduler"]
     )
     parser.add_argument("--date", help="YYYY-MM-DD, for send")
+    parser.add_argument("--to", help="Kindle address, for send-test")
+    parser.add_argument("--url", help="article to convert, for send-test")
     arguments = parser.parse_args(argv)
 
     config = load_settings()
@@ -139,6 +192,10 @@ def main(argv: list[str] | None = None) -> int:
     if arguments.command == "send":
         on = date.fromisoformat(arguments.date) if arguments.date else None
         return command_send(config, on)
+    if arguments.command == "send-test":
+        if not arguments.to:
+            parser.error("send-test needs --to <your>@kindle.com")
+        return command_send_test(config, arguments.to, arguments.url)
     return command_scheduler(config)
 
 
