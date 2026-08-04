@@ -13,9 +13,10 @@ from collections import defaultdict, deque
 from typing import Annotated, Iterator
 
 import psycopg
-from fastapi import BackgroundTasks, Depends, FastAPI, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from psycopg_pool import ConnectionPool, PoolTimeout
 from pydantic import BaseModel, Field
 
 from wikindle.config import Settings, settings as load_settings
@@ -48,7 +49,11 @@ def get_settings() -> Settings:
     return load_settings()
 
 
-_pool = None
+#: Long enough to ride out a brief contention spike, short enough that a reader
+#: gets an answer instead of a spinner when the database is simply down.
+DB_ACQUIRE_TIMEOUT = 5.0
+
+_pool: ConnectionPool | None = None
 
 
 def get_connection(
@@ -56,11 +61,26 @@ def get_connection(
 ) -> Iterator[psycopg.Connection]:
     global _pool
     if _pool is None:
-        from psycopg_pool import ConnectionPool
+        _pool = ConnectionPool(
+            config.database_url,
+            min_size=1,
+            max_size=8,
+            timeout=DB_ACQUIRE_TIMEOUT,
+            open=False,
+        )
+        _pool.open()
 
-        _pool = ConnectionPool(config.database_url, min_size=1, max_size=8, open=True)
-    with _pool.connection() as connection:
-        yield connection
+    try:
+        with _pool.connection() as connection:
+            yield connection
+    except PoolTimeout as exc:
+        # Without this the request hangs for the pool's default timeout and then
+        # returns a 500 with no explanation — indistinguishable, from the
+        # outside, from the converter being slow.
+        log.error("database unavailable: %s", exc)
+        raise HTTPException(
+            status_code=503, detail="The database is unavailable. Try again shortly."
+        ) from exc
 
 
 def get_repository(

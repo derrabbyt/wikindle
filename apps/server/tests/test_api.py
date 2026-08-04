@@ -220,3 +220,30 @@ def test_the_confirmation_page_offers_the_address_as_a_copy(context):
 
     assert 'id="sender"' in page and 'id="copy"' in page
     assert "clipboard" in page
+
+
+def test_a_dead_database_gives_a_fast_503_not_a_hang(tmp_path):
+    """A pool that cannot hand out a connection used to stall the request for
+    the default timeout and then return an unexplained 500 — indistinguishable
+    from a slow conversion."""
+    from psycopg_pool import PoolTimeout
+
+    class ExhaustedPool:
+        def connection(self):
+            raise PoolTimeout("couldn't get a connection after 5.0 sec")
+
+    config = Settings(database_url="postgresql://unused", storage_dir=tmp_path)
+    app = api.create_app()
+    app.dependency_overrides[api.get_settings] = lambda: config
+    app.dependency_overrides[api.get_mailer] = lambda: RecordingMailer()
+    api._pool = ExhaustedPool()
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/unsubscribe", json={"kindle_address": "me@kindle.com"}
+            )
+        assert response.status_code == 503
+        assert "unavailable" in response.json()["detail"].lower()
+    finally:
+        api._pool = None
