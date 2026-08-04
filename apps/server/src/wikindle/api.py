@@ -319,8 +319,35 @@ def _page(heading: str, body: str) -> str:
         "<style>body{font:16px/1.6 system-ui,sans-serif;max-width:34rem;"
         "margin:4rem auto;padding:0 1.5rem;color:#18202a}"
         "h1{font-size:1.6rem;line-height:1.25}code{background:#eef1f5;"
-        "padding:.15em .4em;border-radius:.3em}</style>"
+        "padding:.15em .4em;border-radius:.3em}"
+        ".addr{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}"
+        ".addr code{font-size:1.05rem;padding:.5em .7em}"
+        "button{font:inherit;padding:.5em .9em;border:0;border-radius:.4em;"
+        "background:#18202a;color:#fff;cursor:pointer}"
+        "#copied{color:#1d7a4c;font-size:.9rem}</style>"
         f"<h1>{heading}</h1>{body}"
+    )
+
+
+def _copyable(address: str) -> str:
+    """Offer the sending address as a copy, not as something to retype.
+
+    A typo here fails silently and permanently: Amazon simply never accepts our
+    mail, and neither party gets an error. See docs/adr/0007-sending-domain.md.
+    """
+    return (
+        f'<p class="addr"><code id="sender">{address}</code>'
+        '<button type="button" id="copy">Copy</button>'
+        '<span id="copied" role="status"></span></p>'
+        "<script>document.getElementById('copy').addEventListener('click',"
+        "function(){var t=document.getElementById('sender').textContent;"
+        "var done=function(){document.getElementById('copied').textContent="
+        "'Copied.'};"
+        "if(navigator.clipboard){navigator.clipboard.writeText(t).then(done,"
+        "function(){document.getElementById('copied').textContent="
+        "'Select it and copy manually.'})}else{"
+        "document.getElementById('copied').textContent="
+        "'Select it and copy manually.'}});</script>"
     )
 
 
@@ -332,8 +359,8 @@ def _confirmed_page(subscriber: Subscriber, config: Settings) -> str:
         "Amazon → Account &amp; Lists → Content and Devices → Preferences → "
         "Personal Document Settings, and add this address to your "
         "<em>Approved Personal Document E-mail List</em>:</p>"
-        f"<p><code>{config.sender_address}</code></p>"
-        f"<p>Until you do, mail to <code>{subscriber.kindle_address}</code> is "
+        + _copyable(config.sender_address)
+        + f"<p>Until you do, mail to <code>{subscriber.kindle_address}</code> is "
         "discarded silently — Amazon sends no bounce, so we cannot tell that it "
         "happened.</p>",
     )

@@ -38,10 +38,12 @@ class Settings(BaseSettings):
     on_demand_daily_limit: int = 5
 
     resend_api_key: str = ""
-    #: Typed into Amazon Approved Sender Lists by hand, so it can never change.
-    sender_address: str = "kindle@example.invalid"
+    #: Typed into Amazon Approved Sender Lists by hand, so it can never change
+    #: without silently cutting off every existing Subscriber. See
+    #: docs/adr/0007-sending-domain.md.
+    sender_address: str = "read@send.wikindle.xyz"
     sender_name: str = "wikindle"
-    public_url: str = "http://localhost:8000"
+    public_url: str = "https://api.wikindle.xyz"
 
     request_timeout_seconds: float = 30.0
 

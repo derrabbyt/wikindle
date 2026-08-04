@@ -204,3 +204,19 @@ def test_on_demand_accepts_a_wikipedia_url_and_returns_immediately(context, monk
     assert response.status_code == 202
     assert response.json()["status"] == "building"
     assert delivered == ["https://de.wikipedia.org/wiki/Wien"]
+
+
+def test_the_confirmation_page_offers_the_address_as_a_copy(context):
+    """A retyped address fails silently and permanently — Amazon never accepts
+    our mail and neither side gets an error. See ADR 0007."""
+    client, repository, _ = context
+    client.post(
+        "/api/subscribe",
+        json={"kindle_address": "me@kindle.com", "contact_email": "me@example.com"},
+    )
+    token = repository.subscriber_by_kindle_address("me@kindle.com").confirm_token
+
+    page = client.get(f"/confirm?token={token}").text
+
+    assert 'id="sender"' in page and 'id="copy"' in page
+    assert "clipboard" in page

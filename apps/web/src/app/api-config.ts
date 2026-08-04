@@ -4,4 +4,4 @@
  * This is the hostname the Cloudflare Tunnel exposes; the VPS behind it accepts
  * no inbound connections of its own.
  */
-export const API_BASE_URL = "https://api.wikindle.example";
+export const API_BASE_URL = "https://api.wikindle.xyz";
