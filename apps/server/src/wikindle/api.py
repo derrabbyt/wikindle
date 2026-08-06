@@ -30,9 +30,8 @@ from wikindle.services.ondemand import (
     OnDemandService,
     RateLimitExceeded,
 )
-from wikindle.services.subscriptions import AlreadyActive, SubscriptionService
+from wikindle.services.subscriptions import SubscriptionService
 from wikindle.sources.wikipedia import InvalidArticleUrl
-from wikindle.tokens import verify_unsubscribe_token
 
 log = logging.getLogger(__name__)
 
@@ -131,7 +130,6 @@ _on_demand_limiter = IpRateLimiter(limit=20, window_seconds=3600)
 
 class SubscribeRequest(BaseModel):
     kindle_address: str = Field(max_length=254)
-    contact_email: str = Field(max_length=254)
     #: Captured from the browser so per-timezone delivery stays possible later
     #: without having to ask every existing Subscriber.
     timezone: str | None = Field(default=None, max_length=64)
@@ -172,107 +170,41 @@ def create_app() -> FastAPI:
     def health() -> dict:
         return {"status": "ok", "service": "wikindle"}
 
-    @app.post("/api/subscribe", status_code=202)
+    @app.post("/api/subscribe", status_code=201)
     def subscribe(
         body: SubscribeRequest,
         request: Request,
         repository: Annotated[Repository, Depends(get_repository)],
-        mailer: Annotated[Mailer, Depends(get_mailer)],
         config: Annotated[Settings, Depends(get_settings)],
     ):
         if not _signup_limiter.check(_client_ip(request)):
             return _error(429, "Too many signups from this address. Try later.")
 
-        service = SubscriptionService(repository, config, mailer)
         try:
-            service.register(body.kindle_address, body.contact_email, body.timezone)
-        except AlreadyActive:
-            return _error(409, "That Kindle address is already subscribed.")
+            SubscriptionService(repository, config).register(
+                body.kindle_address, body.timezone
+            )
         except ValueError as exc:
             return _error(400, str(exc))
 
+        # There is no confirmation email to follow this, so the response is the
+        # only chance to explain the approved-sender step.
         return {
-            "status": "pending",
-            "message": "Check your email inbox for a confirmation link.",
+            "status": "subscribed",
+            "sender_address": config.sender_address,
+            "message": (
+                f"Subscribed. Now add {config.sender_address} to your Approved "
+                "Personal Document E-mail List on Amazon, or nothing will arrive."
+            ),
         }
-
-    @app.get("/confirm", response_class=HTMLResponse)
-    def confirm(
-        repository: Annotated[Repository, Depends(get_repository)],
-        mailer: Annotated[Mailer, Depends(get_mailer)],
-        config: Annotated[Settings, Depends(get_settings)],
-        t: str | None = None,
-        token: str | None = None,
-    ):
-        # `t` keeps the URL short enough to survive quoted-printable folding;
-        # `token` is still accepted for links sent before that change.
-        service = SubscriptionService(repository, config, mailer)
-        try:
-            subscriber = service.confirm(t or token or "")
-        except LookupError:
-            return HTMLResponse(
-                _page("Link not recognised", "That confirmation link is unknown or "
-                      "has already been used."),
-                status_code=404,
-            )
-        return HTMLResponse(_confirmed_page(subscriber, config))
-
-    def _revoke(repository: Repository, address: str, token: str, config: Settings) -> bool:
-        if not verify_unsubscribe_token(address, token, config.secret_key):
-            return False
-        try:
-            subscriber = repository.subscriber_by_kindle_address(
-                normalise_kindle_address(address)
-            )
-        except ValueError:
-            subscriber = None
-        if subscriber is not None:
-            repository.unsubscribe(subscriber.id)
-        # An unknown address still counts as success: the caller proved control
-        # of the link, and saying "not found" would leak who is subscribed.
-        return True
-
-    @app.get("/unsubscribe", response_class=HTMLResponse)
-    def unsubscribe_via_link(
-        a: str,
-        t: str,
-        repository: Annotated[Repository, Depends(get_repository)],
-        config: Annotated[Settings, Depends(get_settings)],
-    ):
-        if not _revoke(repository, a, t, config):
-            return HTMLResponse(
-                _page("Link not recognised", "<p>That unsubscribe link is not valid.</p>"),
-                status_code=404,
-            )
-        return HTMLResponse(
-            _page(
-                "Unsubscribed",
-                "<p>No more articles will be sent. Nothing else is needed — you "
-                "may want to remove our address from your Amazon approved list "
-                "as well, but that is up to you.</p>",
-            )
-        )
-
-    @app.post("/unsubscribe")
-    def unsubscribe_one_click(
-        a: str,
-        t: str,
-        repository: Annotated[Repository, Depends(get_repository)],
-        config: Annotated[Settings, Depends(get_settings)],
-    ):
-        """The target of List-Unsubscribe-Post, which mail clients POST to."""
-        if not _revoke(repository, a, t, config):
-            return _error(404, "That unsubscribe link is not valid.")
-        return {"status": "unsubscribed"}
 
     @app.post("/api/unsubscribe")
     def unsubscribe(
         body: AddressRequest,
         repository: Annotated[Repository, Depends(get_repository)],
-        mailer: Annotated[Mailer, Depends(get_mailer)],
         config: Annotated[Settings, Depends(get_settings)],
     ):
-        service = SubscriptionService(repository, config, mailer)
+        service = SubscriptionService(repository, config)
         try:
             service.unsubscribe(body.kindle_address)
         except LookupError:
@@ -285,10 +217,9 @@ def create_app() -> FastAPI:
     def forget_me(
         body: AddressRequest,
         repository: Annotated[Repository, Depends(get_repository)],
-        mailer: Annotated[Mailer, Depends(get_mailer)],
         config: Annotated[Settings, Depends(get_settings)],
     ):
-        service = SubscriptionService(repository, config, mailer)
+        service = SubscriptionService(repository, config)
         try:
             service.delete(body.kindle_address)
         except LookupError:
@@ -318,12 +249,12 @@ def create_app() -> FastAPI:
         try:
             lookup = normalise_kindle_address(body.kindle_address)
         except ValueError:
-            return _error(404, "That address is not a confirmed subscriber.")
+            return _error(404, "That address is not subscribed.")
         subscriber = repository.subscriber_by_kindle_address(lookup)
         if subscriber is None or subscriber.status is not SubscriberStatus.ACTIVE:
             # Deliberately the same answer either way: this endpoint should not
-            # confirm whether a given Kindle address is subscribed.
-            return _error(404, "That address is not a confirmed subscriber.")
+            # reveal whether a given Kindle address is subscribed.
+            return _error(404, "That address is not subscribed.")
 
         service = OnDemandService(
             repository, config, ConversionService(repository, config)
@@ -404,48 +335,6 @@ def _page(heading: str, body: str) -> str:
         ".muted{color:#6d6455;font-size:.9rem}"
         "#copied{color:#1d7a4c;font-size:.9rem}</style>"
         f"<h1>{heading}</h1>{body}"
-    )
-
-
-def _copyable(address: str) -> str:
-    """Offer the sending address as a copy, not as something to retype.
-
-    A typo here fails silently and permanently: Amazon simply never accepts our
-    mail, and neither party gets an error. See docs/adr/0007-sending-domain.md.
-    """
-    return (
-        f'<p class="addr"><code id="sender">{address}</code>'
-        '<button type="button" id="copy">Copy</button>'
-        '<span id="copied" role="status"></span></p>'
-        "<script>document.getElementById('copy').addEventListener('click',"
-        "function(){var t=document.getElementById('sender').textContent;"
-        "var done=function(){document.getElementById('copied').textContent="
-        "'Copied.'};"
-        "if(navigator.clipboard){navigator.clipboard.writeText(t).then(done,"
-        "function(){document.getElementById('copied').textContent="
-        "'Select it and copy manually.'})}else{"
-        "document.getElementById('copied').textContent="
-        "'Select it and copy manually.'}});</script>"
-    )
-
-
-def _confirmed_page(subscriber: Subscriber, config: Settings) -> str:
-    return _page(
-        "You're subscribed",
-        "<p><strong>One step left, and without it nothing will arrive.</strong></p>"
-        "<p>Amazon only accepts documents from addresses you have approved. "
-        f'<a class="button" href="{config.amazon_settings_url}">Open your '
-        "Personal Document Settings</a></p>"
-        "<p class=\"muted\">On a non-US account, swap <code>amazon.com</code> in "
-        "that link for your own — <code>amazon.de</code>, <code>amazon.co.uk</code> "
-        "and so on. If it does not land in the right place: Account &amp; Lists → "
-        "Content and Devices → Preferences → Personal Document Settings.</p>"
-        "<p>Add this address to your <em>Approved Personal Document E-mail "
-        "List</em>:</p>"
-        + _copyable(config.sender_address)
-        + f"<p>Until you do, mail to <code>{subscriber.kindle_address}</code> is "
-        "discarded silently — Amazon sends no bounce, so we cannot tell that it "
-        "happened.</p>",
     )
 
 

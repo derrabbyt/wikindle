@@ -14,7 +14,7 @@ from wikindle.models import ConversionStatus, DeliveryKind, DeliveryStatus, Pool
 from wikindle.services.conversions import ConversionService, QualityGateFailed
 from wikindle.services.editions import EditionService
 from wikindle.services.ondemand import OnDemandService, RateLimitExceeded
-from wikindle.services.subscriptions import AlreadyActive, SubscriptionService
+from wikindle.services.subscriptions import SubscriptionService
 
 TODAY = date(2026, 8, 3)
 
@@ -235,10 +235,8 @@ def test_never_repeats_an_article_across_editions(tmp_path):
 # ------------------------------------------------------------------ delivery
 
 
-def confirmed_subscriber(repository, address="a@kindle.com", email="a@example.com"):
-    subscriber = repository.create_pending_subscriber(address, email, "Europe/Vienna", "t")
-    repository.activate_subscriber(subscriber.id)
-    return repository.subscribers[subscriber.id]
+def confirmed_subscriber(repository, address="a@kindle.com", email=None):
+    return repository.create_subscriber(address, "Europe/Vienna")
 
 
 def edition_service(repository, tmp_path, converter=None):
@@ -322,64 +320,86 @@ def test_sending_an_edition_that_was_never_built_reports_rather_than_crashes(tmp
 
 
 # --------------------------------------------------------------- subscriptions
+# There is no confirmation step: it proved control of a mailbox, never of the
+# Kindle, so it stopped nobody from subscribing somebody else's device. See
+# docs/adr/0008-no-confirmation-step.md.
 
 
-def test_registration_is_pending_until_the_contact_email_is_confirmed(tmp_path):
+def test_registering_subscribes_immediately(tmp_path):
     repository = InMemoryRepository()
-    mailer = RecordingMailer()
-    service = SubscriptionService(repository, settings(tmp_path), mailer)
+    service = SubscriptionService(repository, settings(tmp_path))
 
-    service.register("me@kindle.com", "me@example.com", "Europe/Vienna")
+    service.register("me@kindle.com", "Europe/Vienna")
 
     subscriber = repository.subscriber_by_kindle_address("me@kindle.com")
-    assert subscriber.status.value == "pending"
-    assert mailer.sent[0].to == "me@example.com", "confirmation cannot go to a Kindle"
-    assert mailer.sent[0].attachment is None
+    assert subscriber.status.value == "active"
+    assert subscriber.timezone == "Europe/Vienna"
 
 
-def test_confirmation_activates_and_explains_the_approved_sender_step(tmp_path):
+def test_registering_sends_nothing(tmp_path):
+    """We hold no address a human reads, so there is nothing to send them."""
     repository = InMemoryRepository()
     mailer = RecordingMailer()
-    service = SubscriptionService(repository, settings(tmp_path), mailer)
-    service.register("me@kindle.com", "me@example.com", None)
-    token = repository.subscriber_by_kindle_address("me@kindle.com").confirm_token
+    SubscriptionService(repository, settings(tmp_path)).register("me@kindle.com")
 
-    subscriber = service.confirm(token)
-
-    assert subscriber.status.value == "active"
-    body = " ".join(m.text for m in mailer.sent).lower()
-    assert "approved" in body, "the silent-drop failure must be spelled out"
+    assert mailer.sent == []
 
 
-def test_confirming_twice_is_refused(tmp_path):
+def test_registering_twice_is_harmless(tmp_path):
     repository = InMemoryRepository()
-    service = SubscriptionService(repository, settings(tmp_path), RecordingMailer())
-    service.register("me@kindle.com", "me@example.com", None)
-    token = repository.subscriber_by_kindle_address("me@kindle.com").confirm_token
-    service.confirm(token)
+    service = SubscriptionService(repository, settings(tmp_path))
 
-    with pytest.raises(LookupError):
-        service.confirm(token)
+    service.register("me@kindle.com")
+    service.register("me@kindle.com")
+
+    assert len(repository.subscribers) == 1
+    assert repository.subscriber_by_kindle_address("me@kindle.com").status.value == "active"
 
 
-def test_registering_an_already_active_address_does_not_reset_it(tmp_path):
+def test_registering_again_reactivates_someone_who_left(tmp_path):
     repository = InMemoryRepository()
-    service = SubscriptionService(repository, settings(tmp_path), RecordingMailer())
-    service.register("me@kindle.com", "me@example.com", None)
-    service.confirm(repository.subscriber_by_kindle_address("me@kindle.com").confirm_token)
+    service = SubscriptionService(repository, settings(tmp_path))
+    service.register("me@kindle.com")
+    service.unsubscribe("me@kindle.com")
 
-    with pytest.raises(AlreadyActive):
-        service.register("me@kindle.com", "other@example.com", None)
+    service.register("me@kindle.com")
 
     assert repository.subscriber_by_kindle_address("me@kindle.com").status.value == "active"
 
 
+def test_a_mixed_case_address_is_stored_verbatim(tmp_path):
+    repository = InMemoryRepository()
+    address = "selina.liball16_nPgTrV@kindle.com"
+
+    SubscriptionService(repository, settings(tmp_path)).register(address)
+
+    assert repository.subscriber_by_kindle_address(address) is not None
+
+
 def test_a_kindle_address_must_look_like_one(tmp_path):
-    service = SubscriptionService(
-        InMemoryRepository(), settings(tmp_path), RecordingMailer()
-    )
+    service = SubscriptionService(InMemoryRepository(), settings(tmp_path))
     with pytest.raises(ValueError):
-        service.register("not-an-address", "me@example.com", None)
+        service.register("not-an-address")
+
+
+def test_an_ordinary_mailbox_is_refused(tmp_path):
+    service = SubscriptionService(InMemoryRepository(), settings(tmp_path))
+    with pytest.raises(ValueError):
+        service.register("me@example.com")
+
+
+def test_unsubscribing_and_forgetting(tmp_path):
+    repository = InMemoryRepository()
+    service = SubscriptionService(repository, settings(tmp_path))
+    service.register("me@kindle.com")
+
+    service.unsubscribe("me@kindle.com")
+    assert repository.subscriber_by_kindle_address("me@kindle.com").status.value == (
+        "unsubscribed"
+    )
+
+    service.delete("me@kindle.com")
+    assert repository.subscriber_by_kindle_address("me@kindle.com") is None
 
 
 # ------------------------------------------------------------------ on demand

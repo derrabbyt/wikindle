@@ -7,7 +7,7 @@ from enum import StrEnum
 
 
 class SubscriberStatus(StrEnum):
-    PENDING = "pending"
+    # No pending state: there is nothing to confirm. See ADR 0008.
     ACTIVE = "active"
     UNSUBSCRIBED = "unsubscribed"
 
@@ -34,11 +34,9 @@ class DeliveryStatus(StrEnum):
 class Subscriber:
     id: int
     kindle_address: str
-    contact_email: str
     status: SubscriberStatus
     timezone: str | None = None
-    confirm_token: str | None = None
-    confirmed_at: datetime | None = None
+    created_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -28,9 +28,8 @@ _Avoid_: issue, daily, batch
 ### People and delivery
 
 **Subscriber**:
-Someone who has confirmed their wish to receive Editions, identified by a Kindle
-Address and a Contact Email. Someone who has submitted the form but not yet
-clicked the confirmation link is not one yet.
+A Kindle Address signed up to receive Editions. There is no pending state and
+nothing to confirm — see docs/adr/0008-no-confirmation-step.md.
 _Avoid_: user, customer, account. ("Reader" is fine in interface copy, but not in
 code or documentation.)
 
@@ -38,15 +37,9 @@ code or documentation.)
 The `@kindle.com` address a Subscriber's device receives personal documents at.
 Deliberately distinct from the Amazon account email — they are different
 addresses, and confusing them is the most likely mistake a Subscriber makes.
-Receives Conversions and nothing else.
+Receives Conversions and nothing else. It is the only address
+wikindle holds, and no human reads it.
 _Avoid_: email, address
-
-**Contact Email**:
-An ordinary mailbox that a Subscriber actually reads. Carries confirmation and
-problem notices, never Conversions. It exists because a Kindle Address cannot
-receive an email without an attachment and cannot practically be clicked from, so
-it is the only channel through which a silent Subscriber can be reached.
-_Avoid_: personal email, real email
 
 **Approved Sender List**:
 The list, held by Amazon and editable only by the Subscriber, of addresses

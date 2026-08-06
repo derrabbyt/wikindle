@@ -5,20 +5,19 @@
     <h1>One Wikipedia article a day, on your Kindle</h1>
 
     <p class="intro">
-      Every morning, one well-written Wikipedia article — drawn from the
-      featured and good article pool, never a stub — converted to a properly
-      formatted EPUB and delivered to your Kindle.
+      Every morning, one well-written Wikipedia article — drawn from the featured
+      and good article pool, never a stub — converted to a properly formatted
+      EPUB and delivered to your Kindle.
     </p>
 
     <form class="form" (ngSubmit)="subscribe()">
       <label for="kindle">
         Your Send to Kindle address
-        <small
-          >Ends in <code>&#64;kindle.com</code>. This is
-          <strong>not</strong> your Amazon account email — find it under Amazon
-          → Content and Devices → Preferences → Personal Document
-          Settings.</small
-        >
+        <small>
+          Ends in <code>&#64;kindle.com</code>, and is <strong>not</strong> the
+          email you log in to Amazon with. Capitals matter — copy it exactly.
+          <a href="/help/">Where do I find this?</a>
+        </small>
       </label>
       <input
         id="kindle"
@@ -26,32 +25,15 @@
         type="email"
         required
         autocomplete="off"
-        placeholder="yourname@kindle.com"
+        autocapitalize="none"
+        spellcheck="false"
+        placeholder="yourname_aBcDeF@kindle.com"
         [ngModel]="kindleAddress()"
         (ngModelChange)="kindleAddress.set($event)"
       />
 
-      <label for="contact">
-        Your normal email address
-        <small
-          >For the confirmation link, and so we can warn you if articles stop
-          arriving. Your Kindle cannot receive ordinary mail, so we need a
-          mailbox you actually read.</small
-        >
-      </label>
-      <input
-        id="contact"
-        name="contact"
-        type="email"
-        required
-        autocomplete="email"
-        placeholder="you@example.com"
-        [ngModel]="contactEmail()"
-        (ngModelChange)="contactEmail.set($event)"
-      />
-
       <button type="submit" [disabled]="signupBusy()">
-        {{ signupBusy() ? "Sending…" : "Send me an article a day" }}
+        {{ signupBusy() ? "Subscribing…" : "Send me an article a day" }}
       </button>
 
       @if (signupOutcome(); as outcome) {
@@ -66,40 +48,23 @@
     </form>
 
     <div class="note">
-      <strong>One thing Amazon makes you do yourself.</strong> After confirming,
-      you must add our sending address to your Approved Personal Document E-mail
-      List — until you do, Amazon discards our mail without telling either of
-      us. That setting lives in
-      <a
-        href="https://www.amazon.com/hz/mycd/myx#/home/settings/payment"
-        rel="noopener"
-        >your Amazon Personal Document Settings</a
-      >
-      (swap <code>amazon.com</code> for your own regional site if you use one).
-      The confirmation page gives you the exact address to paste.
+      <strong>One step Amazon makes you do yourself.</strong> Your Kindle only
+      accepts documents from senders you have approved, so you need to add
+      <code>read&#64;wikindle.xyz</code> to your Approved Personal Document
+      E-mail List. Until you do, everything we send is discarded — and Amazon
+      tells nobody, so neither of us can see it happening.
+      <a href="/help/">Step-by-step, with screenshots →</a>
     </div>
   </section>
 
   <section class="card">
     <h2>Want one right now?</h2>
     <p class="intro">
-      Already subscribed? Get an extra article immediately — at random, or paste
-      any Wikipedia link, in any language.
+      Already subscribed? Get an extra article immediately, using the address
+      above — at random, or from any Wikipedia link, in any language.
     </p>
 
     <form class="form" (ngSubmit)="sendExtra()">
-      <label for="extra-kindle">Your Send to Kindle address</label>
-      <input
-        id="extra-kindle"
-        name="extraKindle"
-        type="email"
-        required
-        autocomplete="off"
-        placeholder="yourname@kindle.com"
-        [ngModel]="extraAddress()"
-        (ngModelChange)="extraAddress.set($event)"
-      />
-
       <label for="extra-url">
         Wikipedia link <small>Optional — leave blank to be surprised.</small>
       </label>
@@ -129,9 +94,30 @@
     </form>
   </section>
 
+  <section class="card quiet">
+    <h2>Had enough?</h2>
+    <p class="intro">
+      Enter your address above and stop the daily article. You can also just
+      remove <code>read&#64;wikindle.xyz</code> from your Amazon approved list,
+      which works immediately and doesn't depend on us.
+    </p>
+    <button type="button" class="secondary" [disabled]="leaveBusy()" (click)="unsubscribe()">
+      {{ leaveBusy() ? "Stopping…" : "Stop sending me articles" }}
+    </button>
+
+    @if (leaveOutcome(); as outcome) {
+      <p
+        class="message"
+        [class.error]="outcome.kind === 'error'"
+        [attr.role]="outcome.kind === 'error' ? 'alert' : 'status'"
+      >
+        {{ outcome.message }}
+      </p>
+    }
+  </section>
+
   <footer class="footer">
-    Article text comes from Wikipedia and is available under CC BY-SA 4.0. We
-    store your two email addresses and a log of what we sent you, and nothing
-    else.
+    Article text comes from Wikipedia and is available under CC BY-SA 4.0. The
+    only thing we store is your Kindle address and a log of what we sent to it.
   </footer>
 </main>

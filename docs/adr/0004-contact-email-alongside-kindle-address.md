@@ -1,4 +1,14 @@
+---
+status: superseded by ADR-0008
+---
+
 # Signup collects a Contact Email as well as a Kindle Address
+
+> **Superseded by [ADR 0008](0008-no-confirmation-step.md).** The premise
+> below is wrong: confirming a mailbox proves control of that mailbox, not
+> of the Kindle, so it never prevented anybody from subscribing somebody
+> else's device. The observation about silent discards still holds, and is
+> the thing genuinely lost by removing this.
 
 Send to Kindle refuses any email without an attachment, and what it does deliver
 arrives as a document in the reader's library on a device whose browser is barely

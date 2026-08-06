@@ -11,15 +11,16 @@ type Outcome = { kind: "ok" | "error"; message: string } | null;
   styleUrl: "./app.css",
 })
 export class App {
+  /** The only thing we ask for, and the only thing we store. */
   readonly kindleAddress = signal("");
-  readonly contactEmail = signal("");
-  readonly extraAddress = signal("");
   readonly extraUrl = signal("");
 
   readonly signupBusy = signal(false);
   readonly signupOutcome = signal<Outcome>(null);
   readonly extraBusy = signal(false);
   readonly extraOutcome = signal<Outcome>(null);
+  readonly leaveBusy = signal(false);
+  readonly leaveOutcome = signal<Outcome>(null);
 
   /**
    * Captured silently, so per-timezone delivery stays possible later without
@@ -29,34 +30,43 @@ export class App {
     Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
 
   async subscribe(): Promise<void> {
-    this.signupBusy.set(true);
-    this.signupOutcome.set(null);
-    try {
-      this.signupOutcome.set(
-        await this.post("/api/subscribe", {
-          kindle_address: this.kindleAddress().trim(),
-          contact_email: this.contactEmail().trim(),
-          timezone: this.timezone,
-        }),
-      );
-    } finally {
-      this.signupBusy.set(false);
-    }
+    await this.run(this.signupBusy, this.signupOutcome, () =>
+      this.post("/api/subscribe", {
+        kindle_address: this.kindleAddress().trim(),
+        timezone: this.timezone,
+      }),
+    );
   }
 
   async sendExtra(): Promise<void> {
-    this.extraBusy.set(true);
-    this.extraOutcome.set(null);
+    const url = this.extraUrl().trim();
+    await this.run(this.extraBusy, this.extraOutcome, () =>
+      this.post("/api/on-demand", {
+        kindle_address: this.kindleAddress().trim(),
+        url: url.length > 0 ? url : null,
+      }),
+    );
+  }
+
+  async unsubscribe(): Promise<void> {
+    await this.run(this.leaveBusy, this.leaveOutcome, () =>
+      this.post("/api/unsubscribe", {
+        kindle_address: this.kindleAddress().trim(),
+      }),
+    );
+  }
+
+  private async run(
+    busy: { set(value: boolean): void },
+    outcome: { set(value: Outcome): void },
+    action: () => Promise<Outcome>,
+  ): Promise<void> {
+    busy.set(true);
+    outcome.set(null);
     try {
-      const url = this.extraUrl().trim();
-      this.extraOutcome.set(
-        await this.post("/api/on-demand", {
-          kindle_address: this.extraAddress().trim(),
-          url: url.length > 0 ? url : null,
-        }),
-      );
+      outcome.set(await action());
     } finally {
-      this.extraBusy.set(false);
+      busy.set(false);
     }
   }
 

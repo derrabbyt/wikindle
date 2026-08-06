@@ -26,13 +26,10 @@ from wikindle.models import (
 
 class Repository(Protocol):
     # -- subscribers ------------------------------------------------------
-    def create_pending_subscriber(
-        self, kindle_address: str, contact_email: str, timezone_name: str | None,
-        confirm_token: str,
+    def create_subscriber(
+        self, kindle_address: str, timezone_name: str | None
     ) -> Subscriber: ...
-    def subscriber_by_token(self, token: str) -> Subscriber | None: ...
     def subscriber_by_kindle_address(self, kindle_address: str) -> Subscriber | None: ...
-    def activate_subscriber(self, subscriber_id: int) -> None: ...
     def unsubscribe(self, subscriber_id: int) -> None: ...
     def delete_subscriber(self, subscriber_id: int) -> None: ...
     def active_subscribers(self) -> list[Subscriber]: ...
@@ -76,48 +73,29 @@ class PostgresRepository:
 
     # -- subscribers ------------------------------------------------------
 
-    def create_pending_subscriber(
-        self, kindle_address: str, contact_email: str, timezone_name: str | None,
-        confirm_token: str,
+    def create_subscriber(
+        self, kindle_address: str, timezone_name: str | None
     ) -> Subscriber:
+        """Idempotent: signing up again reactivates rather than erroring."""
         row = self._one(
             """
-            INSERT INTO subscribers (kindle_address, contact_email, timezone,
-                                     confirm_token, status)
-            VALUES (%s, %s, %s, %s, 'pending')
+            INSERT INTO subscribers (kindle_address, timezone, status)
+            VALUES (%s, %s, 'active')
             ON CONFLICT (kindle_address) DO UPDATE
-                SET contact_email = EXCLUDED.contact_email,
-                    timezone      = EXCLUDED.timezone,
-                    confirm_token = EXCLUDED.confirm_token,
-                    status        = CASE WHEN subscribers.status = 'active'
-                                         THEN 'active' ELSE 'pending' END
+                SET timezone        = COALESCE(EXCLUDED.timezone, subscribers.timezone),
+                    status          = 'active',
+                    unsubscribed_at = NULL
             RETURNING *
             """,
-            (kindle_address, contact_email, timezone_name, confirm_token),
+            (kindle_address, timezone_name),
         )
         return _subscriber(row)
-
-    def subscriber_by_token(self, token: str) -> Subscriber | None:
-        row = self._maybe_one(
-            "SELECT * FROM subscribers WHERE confirm_token = %s", (token,)
-        )
-        return _subscriber(row) if row else None
 
     def subscriber_by_kindle_address(self, kindle_address: str) -> Subscriber | None:
         row = self._maybe_one(
             "SELECT * FROM subscribers WHERE kindle_address = %s", (kindle_address,)
         )
         return _subscriber(row) if row else None
-
-    def activate_subscriber(self, subscriber_id: int) -> None:
-        self._execute(
-            """
-            UPDATE subscribers
-               SET status = 'active', confirmed_at = now(), confirm_token = NULL
-             WHERE id = %s
-            """,
-            (subscriber_id,),
-        )
 
     def unsubscribe(self, subscriber_id: int) -> None:
         self._execute(
@@ -336,11 +314,9 @@ def _subscriber(row: dict) -> Subscriber:
     return Subscriber(
         id=row["id"],
         kindle_address=row["kindle_address"],
-        contact_email=row["contact_email"],
         status=SubscriberStatus(row["status"]),
         timezone=row.get("timezone"),
-        confirm_token=row.get("confirm_token"),
-        confirmed_at=row.get("confirmed_at"),
+        created_at=row.get("created_at"),
     )
 
 

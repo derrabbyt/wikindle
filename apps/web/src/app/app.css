@@ -158,6 +158,30 @@ button:focus-visible {
   line-height: 1.6;
 }
 
+.card.quiet {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+button.secondary {
+  margin-top: 0;
+  color: #3b3226;
+  background: transparent;
+  /* The base rule sets border: 0, so width and style have to come back too. */
+  border: 1px solid #cabda4;
+}
+
+button.secondary:hover:not(:disabled) {
+  background: #f1ece1;
+}
+
+label small a,
+.note a,
+.intro a {
+  color: #7a5c28;
+}
+
 .footer {
   padding: 0 0.5rem;
   color: #7a7264;
@@ -211,6 +235,21 @@ button:focus-visible {
   .message.error {
     color: #f3c3c3;
     background: #2e1c1c;
+  }
+
+  button.secondary {
+    color: #e0cfa5;
+    border-color: #4a4231;
+  }
+
+  button.secondary:hover:not(:disabled) {
+    background: #241f18;
+  }
+
+  label small a,
+  .note a,
+  .intro a {
+    color: #d8c191;
   }
 }
 

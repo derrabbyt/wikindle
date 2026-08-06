@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Setting up your Kindle — wikindle</title>
+    <meta
+      name="description"
+      content="How to find your Send to Kindle email address, and how to let wikindle send to it."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 3rem 1.5rem 5rem;
+        color: #18202a;
+        background: radial-gradient(circle at top left, #f3ede2 0, transparent 38rem),
+          #faf8f4;
+        font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+        line-height: 1.65;
+      }
+      main {
+        max-width: 46rem;
+        margin: 0 auto;
+      }
+      .eyebrow {
+        margin-bottom: 0.75rem;
+        color: #9a7b45;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: clamp(1.9rem, 6vw, 2.6rem);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        margin: 3rem 0 0.5rem;
+        font-size: 1.35rem;
+        line-height: 1.25;
+      }
+      .lede {
+        color: #5b5347;
+        font-size: 1.05rem;
+      }
+      ol.steps {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: step;
+      }
+      ol.steps > li {
+        position: relative;
+        margin: 2rem 0 0;
+        padding-left: 3rem;
+        counter-increment: step;
+      }
+      ol.steps > li::before {
+        content: counter(step);
+        position: absolute;
+        left: 0;
+        top: 0.1rem;
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        background: #3b3226;
+        color: #fffdfa;
+        border-radius: 50%;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+      figure {
+        margin: 1rem 0 0;
+      }
+      figure img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid #e4ddd0;
+        border-radius: 0.6rem;
+        background: #fff;
+      }
+      figcaption {
+        margin-top: 0.5rem;
+        color: #6d6455;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.85rem;
+      }
+      code {
+        padding: 0.1em 0.4em;
+        background: #f1ece1;
+        border-radius: 0.3em;
+        font-size: 0.95em;
+      }
+      .address {
+        display: flex;
+        gap: 0.6rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 1rem 0;
+      }
+      .address code {
+        padding: 0.55em 0.8em;
+        font-size: 1.05rem;
+      }
+      a.button,
+      button {
+        display: inline-block;
+        padding: 0.7rem 1.1rem;
+        background: #3b3226;
+        color: #fffdfa;
+        border: 0;
+        border-radius: 0.55rem;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 1rem;
+        font-weight: 650;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      a.button:hover,
+      button:hover {
+        background: #241d13;
+      }
+      .note {
+        margin: 1rem 0;
+        padding: 1rem 1.1rem;
+        background: #f7f1e4;
+        border-left: 3px solid #c8a86a;
+        border-radius: 0 0.55rem 0.55rem 0;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.92rem;
+      }
+      .muted {
+        color: #6d6455;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.9rem;
+      }
+      #copied {
+        color: #1d7a4c;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.9rem;
+      }
+      footer {
+        margin-top: 4rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e4ddd0;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #ece6db;
+          background: radial-gradient(circle at top left, #241f18 0, transparent 38rem),
+            #17150f;
+        }
+        .lede,
+        .muted,
+        figcaption {
+          color: #a9a190;
+        }
+        code,
+        .note {
+          background: #2a2519;
+        }
+        figure img {
+          border-color: #383225;
+        }
+        a.button,
+        button {
+          background: #e0cfa5;
+          color: #17150f;
+        }
+        footer {
+          border-top-color: #383225;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow"><a href="/" style="color: inherit">← wikindle</a></p>
+
+      <h1>Setting up your Kindle</h1>
+      <p class="lede">
+        Two things live in the same Amazon settings page: the address your Kindle
+        receives documents at, and the list of senders it will accept them from.
+        You need the first to sign up, and the second or nothing will arrive.
+      </p>
+
+      <h2>Open your Amazon settings</h2>
+      <p>
+        <a class="button" id="amazon-link" href="https://www.amazon.com/mycd"
+          >Open Manage Your Content and Devices</a
+        >
+      </p>
+      <p class="muted" id="region-note">
+        This opens amazon.com. If your Amazon account is on another site, use
+        that one instead.
+      </p>
+
+      <ol class="steps">
+        <li>
+          <h2 style="margin-top: 0">Go to the Preferences tab</h2>
+          <p>
+            Manage Your Content and Devices opens on <em>Content</em>. Everything
+            you need is under <strong>Preferences</strong>.
+          </p>
+          <figure>
+            <img
+              src="step-preferences.png"
+              alt="The Manage Your Content and Devices page with the Preferences tab highlighted"
+              loading="lazy"
+            />
+            <figcaption>Preferences is the third tab along the top.</figcaption>
+          </figure>
+        </li>
+
+        <li>
+          <h2 style="margin-top: 0">Find your Send to Kindle address</h2>
+          <p>
+            Scroll down to <strong>Personal Document Settings</strong>. Under
+            <em>Send-to-Kindle E-Mail Settings</em> you'll see one address per
+            device. Pick whichever device you want to read on — they're different
+            addresses, and each one delivers only to that device.
+          </p>
+          <figure>
+            <img
+              src="step-find-address.png"
+              alt="Personal Document Settings showing a table of devices and their Send-to-Kindle email addresses"
+              loading="lazy"
+            />
+            <figcaption>
+              One address per device, each ending in <code>@kindle.com</code>.
+            </figcaption>
+          </figure>
+          <div class="note">
+            <strong>Copy it exactly, capitals and all.</strong> Amazon puts a
+            random mix of upper and lower case in these addresses, and they are
+            case-sensitive — <code>aBcDeF</code> is not the same address as
+            <code>abcdef</code>. This is also <em>not</em> the email you log in to
+            Amazon with.
+          </div>
+        </li>
+
+        <li>
+          <h2 style="margin-top: 0">Let wikindle send to it</h2>
+          <p>
+            Still on the same page, find
+            <strong>Approved Personal Document E-mail List</strong>, click
+            <em>Add a new email address</em>, and add:
+          </p>
+          <p class="address">
+            <code id="sender">read@wikindle.xyz</code>
+            <button type="button" id="copy">Copy</button>
+            <span id="copied" role="status"></span>
+          </p>
+          <figure>
+            <img
+              src="step-approved-list.png"
+              alt="The Approved Personal Document E-mail List with read@wikindle.xyz added"
+              loading="lazy"
+            />
+            <figcaption>This is what it should look like afterwards.</figcaption>
+          </figure>
+          <div class="note">
+            <strong>This step is not optional.</strong> Amazon accepts documents
+            only from addresses on this list. Until ours is on it, everything we
+            send is thrown away — and Amazon tells nobody, so neither you nor we
+            can see that it happened.
+          </div>
+        </li>
+      </ol>
+
+      <h2>That's it</h2>
+      <p>
+        Sign up with the address from step 2 and the next edition will arrive on
+        that device.
+      </p>
+      <p><a class="button" href="/">Back to sign up</a></p>
+
+      <footer>
+        <p class="muted">
+          Want to stop? Either unsubscribe on the
+          <a href="/">front page</a>, or just delete
+          <code>read@wikindle.xyz</code> from the approved list above — that stops
+          delivery immediately and doesn't depend on us at all.
+        </p>
+      </footer>
+    </main>
+
+    <script>
+      // Amazon accounts are tied to a regional site, and a link to the wrong one
+      // lands you on a store you are not signed in to. Guess from the browser's
+      // locale; the note underneath always says which one was chosen so it can
+      // be ignored when the guess is wrong.
+      var AMAZON_SITES = {
+        US: ["amazon.com", "the United States"],
+        GB: ["amazon.co.uk", "the United Kingdom"],
+        CA: ["amazon.ca", "Canada"],
+        DE: ["amazon.de", "Germany"],
+        AT: ["amazon.de", "Austria (Amazon uses amazon.de)"],
+        CH: ["amazon.de", "Switzerland (Amazon uses amazon.de)"],
+        AU: ["amazon.com.au", "Australia"],
+        FR: ["amazon.fr", "France"],
+        BE: ["amazon.fr", "Belgium (Amazon uses amazon.fr)"],
+        IN: ["amazon.in", "India"],
+        IE: ["amazon.co.uk", "Ireland (Amazon uses amazon.co.uk)"],
+        NZ: ["amazon.com.au", "New Zealand (Amazon uses amazon.com.au)"],
+      };
+      // Falls back to the language when the locale carries no region subtag,
+      // which is common — "de" alone tells us more than nothing.
+      var BY_LANGUAGE = { de: "DE", fr: "FR", en: "US" };
+
+      function detectRegion() {
+        var tags = navigator.languages || [navigator.language || "en-US"];
+        for (var i = 0; i < tags.length; i++) {
+          var parts = String(tags[i]).replace("_", "-").split("-");
+          for (var j = 1; j < parts.length; j++) {
+            var region = parts[j].toUpperCase();
+            if (AMAZON_SITES[region]) return region;
+          }
+        }
+        for (var k = 0; k < tags.length; k++) {
+          var language = String(tags[k]).split("-")[0].toLowerCase();
+          if (BY_LANGUAGE[language]) return BY_LANGUAGE[language];
+        }
+        return "US";
+      }
+
+      (function () {
+        var site = AMAZON_SITES[detectRegion()];
+        var link = document.getElementById("amazon-link");
+        link.href = "https://www." + site[0] + "/mycd";
+        document.getElementById("region-note").innerHTML =
+          "This opens <strong>" +
+          site[0] +
+          "</strong>, based on your browser's language settings (" +
+          site[1] +
+          "). If your Amazon account is on a different site, swap the domain.";
+      })();
+
+      document.getElementById("copy").addEventListener("click", function () {
+        var text = document.getElementById("sender").textContent;
+        var done = function () {
+          document.getElementById("copied").textContent = "Copied.";
+        };
+        var manual = function () {
+          document.getElementById("copied").textContent =
+            "Select it and copy manually.";
+        };
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(done, manual);
+        } else {
+          manual();
+        }
+      });
+    </script>
+  </body>
+</html>

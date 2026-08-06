@@ -59,19 +59,17 @@ CREATE TABLE IF NOT EXISTS editions (
 );
 
 -- ------------------------------------------------------------------ subscribers
--- A Kindle Address cannot receive an email without an attachment and cannot
--- practically be clicked from, so confirmation goes to the Contact Email. See
--- docs/adr/0004-contact-email-alongside-kindle-address.md.
+-- A Kindle Address and nothing else. Confirming a second mailbox proved
+-- control of that mailbox, never of the Kindle, so it stopped anybody from
+-- subscribing somebody else's device exactly not at all. Amazon's Approved
+-- Sender List is the real gate. See docs/adr/0008-no-confirmation-step.md.
 CREATE TABLE IF NOT EXISTS subscribers (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     kindle_address  TEXT        NOT NULL UNIQUE,
-    contact_email   TEXT        NOT NULL,
     timezone        TEXT,
-    status          TEXT        NOT NULL DEFAULT 'pending'
-                                CHECK (status IN ('pending', 'active', 'unsubscribed')),
-    confirm_token   TEXT UNIQUE,
+    status          TEXT        NOT NULL DEFAULT 'active'
+                                CHECK (status IN ('active', 'unsubscribed')),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    confirmed_at    TIMESTAMPTZ,
     unsubscribed_at TIMESTAMPTZ
 );
 

@@ -8,7 +8,7 @@ Delivery uses Amazon's **Send to Kindle** personal-document email: the `.epub`
 is mailed as an attachment to the reader's `@kindle.com` address.
 
 The vocabulary this project uses — Article, Conversion, Edition, Subscriber,
-Kindle Address, Contact Email, Delivery — is defined in [CONTEXT.md](CONTEXT.md).
+Kindle Address, Delivery — is defined in [CONTEXT.md](CONTEXT.md).
 The decisions that shaped it are in [docs/adr/](docs/adr/).
 
 ## Shape
@@ -32,6 +32,7 @@ inbound connection from the internet. See
 | `apps/server/` | Python: API, converter, jobs. The whole backend. |
 | `apps/web/` | Angular SPA, deployed to Cloudflare Pages. |
 | `db/schema.sql` | The database, applied on first start. |
+| `db/migrations/` | Applied by hand — `schema.sql` only runs on an empty volume. |
 | `docs/adr/` | Why things are the way they are. |
 
 ## Running it
@@ -93,10 +94,18 @@ Amazon only accepts personal documents from addresses on the reader's **Approved
 Personal Document E-mail List**, which only they can edit. Until wikindle's
 sending address is on it, Amazon discards our mail **with no bounce and no
 error** — a delivery recorded as `sent` is evidence that Resend accepted the
-message, never that anyone received it. This is why signup asks for an ordinary
-email address as well as a Kindle Address: it is the only channel through which
-a silent subscriber can be reached. See
-[ADR 0004](docs/adr/0004-contact-email-alongside-kindle-address.md).
+message, never that anyone received it.
+
+That is also the whole of wikindle's abuse protection, and it is enforced by
+Amazon rather than by us: nobody can subscribe a stranger's device, because
+nothing reaches a Kindle until its owner adds our address by hand. Signup
+therefore asks for a Kindle Address and nothing else — a confirmation email
+proved control of a mailbox, never of the Kindle. See
+[ADR 0008](docs/adr/0008-no-confirmation-step.md).
+
+The cost is that wikindle holds no address a human reads, so everything a
+subscriber needs to know is said on the site: `/help/` walks through both steps
+with screenshots.
 
 ## Licence and attribution
 

@@ -50,34 +50,33 @@ def test_the_schema_applies_cleanly(repository):
 
 
 def test_subscriber_lifecycle(repository):
-    created = repository.create_pending_subscriber(
-        "me@kindle.com", "me@example.com", "Europe/Vienna", "token-1"
-    )
-    assert created.status is SubscriberStatus.PENDING
-
-    assert repository.subscriber_by_token("token-1").id == created.id
-    repository.activate_subscriber(created.id)
-
-    active = repository.subscriber_by_kindle_address("me@kindle.com")
-    assert active.status is SubscriberStatus.ACTIVE
-    assert active.confirm_token is None
+    created = repository.create_subscriber("me_aBc@kindle.com", "Europe/Vienna")
+    assert created.status is SubscriberStatus.ACTIVE
     assert [s.id for s in repository.active_subscribers()] == [created.id]
 
     repository.unsubscribe(created.id)
     assert repository.active_subscribers() == []
 
 
-def test_registering_the_same_address_again_does_not_deactivate_it(repository):
-    created = repository.create_pending_subscriber(
-        "me@kindle.com", "me@example.com", None, "token-1"
-    )
-    repository.activate_subscriber(created.id)
+def test_the_database_preserves_the_case_of_a_kindle_address(repository):
+    """Regression: lowercasing yields an address Amazon discards silently."""
+    address = "selina.liball16_nPgTrV@kindle.com"
 
-    repository.create_pending_subscriber("me@kindle.com", "other@example.com", None, "t2")
+    repository.create_subscriber(address, None)
 
-    assert repository.subscriber_by_kindle_address("me@kindle.com").status is (
-        SubscriberStatus.ACTIVE
-    )
+    assert repository.subscriber_by_kindle_address(address).kindle_address == address
+    assert repository.subscriber_by_kindle_address(address.lower()) is None
+
+
+def test_subscribing_again_reactivates_rather_than_erroring(repository):
+    created = repository.create_subscriber("me_aBc@kindle.com", "Europe/Vienna")
+    repository.unsubscribe(created.id)
+
+    again = repository.create_subscriber("me_aBc@kindle.com", None)
+
+    assert again.id == created.id
+    assert again.status is SubscriberStatus.ACTIVE
+    assert again.timezone == "Europe/Vienna", "an omitted timezone must not erase one"
 
 
 def built_conversion(repository, url="https://en.wikipedia.org/wiki/Cat"):
@@ -170,10 +169,7 @@ def test_pool_sync_is_repeatable(repository):
 
 
 def test_one_delivery_per_subscriber_per_edition_is_enforced_by_the_database(repository):
-    subscriber = repository.create_pending_subscriber(
-        "me@kindle.com", "me@example.com", None, "t"
-    )
-    repository.activate_subscriber(subscriber.id)
+    subscriber = repository.create_subscriber("me_aBc@kindle.com", None)
     conversion = built_conversion(repository)
     repository.create_edition(TODAY, conversion.id)
 
@@ -190,9 +186,7 @@ def test_one_delivery_per_subscriber_per_edition_is_enforced_by_the_database(rep
 
 def test_on_demand_deliveries_are_not_covered_by_that_constraint(repository):
     """Several extra articles a day is the point; the unique index is partial."""
-    subscriber = repository.create_pending_subscriber(
-        "me@kindle.com", "me@example.com", None, "t"
-    )
+    subscriber = repository.create_subscriber("me_aBc@kindle.com", None)
     conversion = built_conversion(repository)
 
     for _ in range(3):
@@ -203,9 +197,7 @@ def test_on_demand_deliveries_are_not_covered_by_that_constraint(repository):
 
 
 def test_marking_a_delivery_sent_records_the_provider_id(repository):
-    subscriber = repository.create_pending_subscriber(
-        "me@kindle.com", "me@example.com", None, "t"
-    )
+    subscriber = repository.create_subscriber("me_aBc@kindle.com", None)
     conversion = built_conversion(repository)
     delivery_id = repository.record_delivery(
         subscriber.id, conversion.id, DeliveryKind.ON_DEMAND
@@ -224,9 +216,7 @@ def test_marking_a_delivery_sent_records_the_provider_id(repository):
 
 
 def test_deleting_a_subscriber_removes_their_deliveries(repository):
-    subscriber = repository.create_pending_subscriber(
-        "me@kindle.com", "me@example.com", None, "t"
-    )
+    subscriber = repository.create_subscriber("me_aBc@kindle.com", None)
     conversion = built_conversion(repository)
     repository.record_delivery(subscriber.id, conversion.id, DeliveryKind.ON_DEMAND)
 

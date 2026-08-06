@@ -37,17 +37,6 @@ class Settings(BaseSettings):
     #: quota and Wikimedia, not the Subscriber — see ADR 0005.
     on_demand_daily_limit: int = 5
 
-    #: Signs one-click unsubscribe links. Changing it invalidates every link
-    #: already sitting in somebody's inbox, so set it once and leave it.
-    secret_key: str = "insecure-development-secret"
-
-    #: Deep link to Amazon's Personal Document Settings. Defaults to the US site
-    #: because signup is open; a mostly German-speaking readership would be
-    #: better served by pointing this at amazon.de. Deliberately carries no
-    #: ``:~:text=`` highlight — that is Chromium-only and would not match on a
-    #: page rendered in another language anyway.
-    amazon_settings_url: str = "https://www.amazon.com/hz/mycd/myx#/home/settings/payment"
-
     resend_api_key: str = ""
     #: Typed into Amazon Approved Sender Lists by hand, so it can never change
     #: without silently cutting off every existing Subscriber. See

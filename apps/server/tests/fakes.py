@@ -41,16 +41,13 @@ class InMemoryRepository:
 
     # -- subscribers ------------------------------------------------------
 
-    def create_pending_subscriber(
-        self, kindle_address, contact_email, timezone_name, confirm_token
-    ) -> Subscriber:
+    def create_subscriber(self, kindle_address, timezone_name=None) -> Subscriber:
         existing = self.subscriber_by_kindle_address(kindle_address)
         if existing:
             updated = replace(
                 existing,
-                contact_email=contact_email,
-                timezone=timezone_name,
-                confirm_token=confirm_token,
+                status=SubscriberStatus.ACTIVE,
+                timezone=timezone_name or existing.timezone,
             )
             self.subscribers[existing.id] = updated
             return updated
@@ -58,32 +55,16 @@ class InMemoryRepository:
         subscriber = Subscriber(
             id=next(self._ids),
             kindle_address=kindle_address,
-            contact_email=contact_email,
-            status=SubscriberStatus.PENDING,
+            status=SubscriberStatus.ACTIVE,
             timezone=timezone_name,
-            confirm_token=confirm_token,
         )
         self.subscribers[subscriber.id] = subscriber
         return subscriber
-
-    def subscriber_by_token(self, token):
-        return next(
-            (s for s in self.subscribers.values() if s.confirm_token == token), None
-        )
 
     def subscriber_by_kindle_address(self, kindle_address):
         return next(
             (s for s in self.subscribers.values() if s.kindle_address == kindle_address),
             None,
-        )
-
-    def activate_subscriber(self, subscriber_id):
-        current = self.subscribers[subscriber_id]
-        self.subscribers[subscriber_id] = replace(
-            current,
-            status=SubscriberStatus.ACTIVE,
-            confirm_token=None,
-            confirmed_at=datetime.now(timezone.utc),
         )
 
     def unsubscribe(self, subscriber_id):
