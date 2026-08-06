@@ -61,26 +61,65 @@ export class App {
   }
 
   private async post(path: string, body: unknown): Promise<Outcome> {
+    const url = `${API_BASE_URL}${path}`;
+    let response: Response;
+
     try {
-      const response = await fetch(`${API_BASE_URL}${path}`, {
+      response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const payload = (await response.json()) as {
-        message?: string;
-        error?: string;
+    } catch (error: unknown) {
+      // Only a genuine transport failure reaches here: DNS, TLS, CORS or no
+      // network. Anything with a status code takes the path below.
+      console.error(`wikindle: could not reach ${url}`, error);
+      return {
+        kind: "error",
+        message: `Could not reach ${host()}. Check your connection and try again.`,
       };
-
-      if (!response.ok) {
-        return {
-          kind: "error",
-          message: payload.error ?? "Something went wrong.",
-        };
-      }
-      return { kind: "ok", message: payload.message ?? "Done." };
-    } catch {
-      return { kind: "error", message: "Could not reach the server." };
     }
+
+    // Parsed defensively and *after* checking the status: when the API is down,
+    // Cloudflare answers with an HTML error page, and parsing that as JSON used
+    // to throw and be reported as though the server were unreachable.
+    const payload = await readJson(response);
+
+    if (!response.ok) {
+      if (payload?.error) {
+        return { kind: "error", message: payload.error };
+      }
+      console.error(`wikindle: ${url} returned ${response.status}`);
+      return {
+        kind: "error",
+        message:
+          response.status >= 500
+            ? `${host()} returned ${response.status}. It may be restarting — try again in a minute.`
+            : `${host()} returned ${response.status}. Please try again.`,
+      };
+    }
+
+    return { kind: "ok", message: payload?.message ?? "Done." };
+  }
+}
+
+interface ApiPayload {
+  message?: string;
+  error?: string;
+}
+
+function host(): string {
+  try {
+    return new URL(API_BASE_URL).host;
+  } catch {
+    return "the server";
+  }
+}
+
+async function readJson(response: Response): Promise<ApiPayload | null> {
+  try {
+    return (await response.json()) as ApiPayload;
+  } catch {
+    return null;
   }
 }
