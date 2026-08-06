@@ -345,3 +345,57 @@ def test_the_confirmation_page_links_straight_to_amazons_settings(context):
     assert "hz/mycd/myx" in page
     assert ":~:text=" not in page, "text fragments are Chromium-only and fail on a translated page"
     assert "amazon.de" in page, "non-US readers need to know to swap the domain"
+
+
+SELINA = "selina.liball16_nPgTrV@kindle.com"
+
+
+def test_a_mixed_case_kindle_address_survives_signup_unchanged(context):
+    """Regression. Amazon builds these with a random mixed-case suffix and the
+    local part is case-sensitive, so lowercasing produced an address that does
+    not exist — and Amazon discards mail to it without a bounce. Invisible on an
+    all-lowercase address, which is why testing on one account missed it."""
+    client, repository, _ = context
+
+    response = client.post(
+        "/api/subscribe",
+        json={"kindle_address": SELINA, "contact_email": "selina@example.com"},
+    )
+
+    assert response.status_code == 202
+    assert repository.subscriber_by_kindle_address(SELINA) is not None
+    assert list(repository.subscribers.values())[0].kindle_address == SELINA
+
+
+def test_on_demand_finds_a_subscriber_with_a_mixed_case_address(context, monkeypatch):
+    client, repository, _ = context
+    client.post(
+        "/api/subscribe",
+        json={"kindle_address": SELINA, "contact_email": "selina@example.com"},
+    )
+    token = repository.subscriber_by_kindle_address(SELINA).confirm_token
+    client.get(f"/confirm?t={token}")
+    monkeypatch.setattr(api, "_deliver_on_demand", lambda *a: None)
+
+    response = client.post("/api/on-demand", json={"kindle_address": SELINA})
+
+    assert response.status_code == 202, "a mixed-case address must not read as unknown"
+
+
+def test_unsubscribe_token_round_trips_for_a_mixed_case_address(context, tmp_path):
+    from wikindle.tokens import unsubscribe_token
+
+    client, repository, _ = context
+    client.post(
+        "/api/subscribe",
+        json={"kindle_address": SELINA, "contact_email": "selina@example.com"},
+    )
+    token = repository.subscriber_by_kindle_address(SELINA).confirm_token
+    client.get(f"/confirm?t={token}")
+
+    config = Settings(database_url="postgresql://unused", storage_dir=tmp_path)
+    signed = unsubscribe_token(SELINA, config.secret_key)
+
+    response = client.post(f"/unsubscribe?a={SELINA}&t={signed}")
+    assert response.status_code == 200
+    assert repository.subscriber_by_kindle_address(SELINA).status == "unsubscribed"

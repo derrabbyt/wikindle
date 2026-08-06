@@ -7,10 +7,10 @@ docs/adr/0004-contact-email-alongside-kindle-address.md.
 from __future__ import annotations
 
 import logging
-import re
 import secrets
 from urllib.parse import quote
 
+from wikindle.addresses import normalise_email, normalise_kindle_address
 from wikindle.config import Settings
 from wikindle.mail import Mailer, Message
 from wikindle.models import Subscriber, SubscriberStatus
@@ -19,11 +19,6 @@ from wikindle.tokens import unsubscribe_token
 
 log = logging.getLogger(__name__)
 
-_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-#: Amazon hands out addresses on kindle.com; anything else is a typo that would
-#: fail silently days later.
-_KINDLE_DOMAIN = re.compile(r"(^|\.)kindle\.com$", re.I)
 
 
 class AlreadyActive(ValueError):
@@ -41,8 +36,8 @@ class SubscriptionService:
     def register(
         self, kindle_address: str, contact_email: str, timezone_name: str | None
     ) -> Subscriber:
-        kindle_address = _normalise_kindle_address(kindle_address)
-        contact_email = _normalise_email(contact_email, "contact email")
+        kindle_address = normalise_kindle_address(kindle_address)
+        contact_email = normalise_email(contact_email, "contact email")
 
         existing = self._repository.subscriber_by_kindle_address(kindle_address)
         if existing and existing.status is SubscriberStatus.ACTIVE:
@@ -93,7 +88,7 @@ class SubscriptionService:
 
     def unsubscribe(self, kindle_address: str) -> None:
         subscriber = self._repository.subscriber_by_kindle_address(
-            _normalise_kindle_address(kindle_address)
+            normalise_kindle_address(kindle_address)
         )
         if subscriber is None:
             raise LookupError("not subscribed")
@@ -101,7 +96,7 @@ class SubscriptionService:
 
     def delete(self, kindle_address: str) -> None:
         subscriber = self._repository.subscriber_by_kindle_address(
-            _normalise_kindle_address(kindle_address)
+            normalise_kindle_address(kindle_address)
         )
         if subscriber is None:
             raise LookupError("not subscribed")
@@ -222,20 +217,3 @@ def _wrap_html(body: str) -> str:
     ).replace(
         'class="muted"', 'style="color:#6d6455;font-size:14px"'
     )
-
-
-def _normalise_email(value: str, what: str) -> str:
-    value = (value or "").strip().lower()
-    if not _EMAIL.match(value):
-        raise ValueError(f"{value!r} is not a valid {what}")
-    return value
-
-
-def _normalise_kindle_address(value: str) -> str:
-    address = _normalise_email(value, "Kindle address")
-    if not _KINDLE_DOMAIN.search(address.split("@", 1)[1]):
-        raise ValueError(
-            f"{address!r} is not a Send to Kindle address — it should end in "
-            "@kindle.com, and is not the same as your Amazon account email"
-        )
-    return address

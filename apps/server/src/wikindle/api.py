@@ -19,6 +19,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from psycopg_pool import ConnectionPool, PoolTimeout
 from pydantic import BaseModel, Field
 
+from wikindle.addresses import normalise_kindle_address
 from wikindle.config import Settings, settings as load_settings
 from wikindle.mail import Mailer, RecordingMailer, ResendMailer
 from wikindle.models import Subscriber, SubscriberStatus
@@ -219,7 +220,12 @@ def create_app() -> FastAPI:
     def _revoke(repository: Repository, address: str, token: str, config: Settings) -> bool:
         if not verify_unsubscribe_token(address, token, config.secret_key):
             return False
-        subscriber = repository.subscriber_by_kindle_address(address.strip().lower())
+        try:
+            subscriber = repository.subscriber_by_kindle_address(
+                normalise_kindle_address(address)
+            )
+        except ValueError:
+            subscriber = None
         if subscriber is not None:
             repository.unsubscribe(subscriber.id)
         # An unknown address still counts as success: the caller proved control
@@ -309,9 +315,11 @@ def create_app() -> FastAPI:
         if not _on_demand_limiter.check(_client_ip(request)):
             return _error(429, "Too many requests from this address. Try later.")
 
-        subscriber = repository.subscriber_by_kindle_address(
-            body.kindle_address.strip().lower()
-        )
+        try:
+            lookup = normalise_kindle_address(body.kindle_address)
+        except ValueError:
+            return _error(404, "That address is not a confirmed subscriber.")
+        subscriber = repository.subscriber_by_kindle_address(lookup)
         if subscriber is None or subscriber.status is not SubscriberStatus.ACTIVE:
             # Deliberately the same answer either way: this endpoint should not
             # confirm whether a given Kindle address is subscribed.

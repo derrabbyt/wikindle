@@ -12,7 +12,9 @@ from hashlib import sha256
 
 
 def unsubscribe_token(address: str, secret: str) -> str:
-    digest = hmac.new(secret.encode(), address.strip().lower().encode(), sha256)
+    # Not lowercased: the local part is case-sensitive, so the token must be
+    # derived from exactly the address we stored.
+    digest = hmac.new(secret.encode(), address.strip().encode(), sha256)
     return digest.hexdigest()[:32]
 
 
