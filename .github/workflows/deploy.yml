@@ -112,8 +112,48 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # The VPS pulls; nothing here reaches into it. Deploying is
-      # `docker compose pull && docker compose up -d` on the box.
+  # Reaches the box over SSH through the Cloudflare Tunnel, as a key that can
+  # run deploy/rollout.sh and nothing else. Skipped until DEPLOY_SSH_HOST is
+  # set, so the workflow stays green on a repository that has not been wired up.
+  # See docs/adr/0009-ci-rolls-out-over-ssh-through-the-tunnel.md.
+  deploy-server:
+    name: Roll out the server
+    needs: publish-image
+    if: vars.DEPLOY_SSH_HOST != ''
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install cloudflared
+        run: |
+          curl -fsSL -o cloudflared.deb \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+
+      - name: Roll out
+        env:
+          DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          # cloudflared reads the Access service token from these two.
+          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/deploy \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ProxyCommand='cloudflared access ssh --hostname %h' \
+            "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST"
+
+      - name: Wait for the API
+        run: curl -fsS --retry 10 --retry-delay 3 --retry-all-errors https://api.wikindle.xyz/api/health
 
   deploy-web:
     name: Deploy the frontend

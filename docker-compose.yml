@@ -54,6 +54,9 @@ services:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN}"]
+    # Lets the tunnel reach the host's sshd for CI rollouts — see ADR 0009.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - api
 

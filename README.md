@@ -70,6 +70,51 @@ Backups are yours to run — nothing else does them:
 docker compose run --rm backup
 ```
 
+## Deploying
+
+A push to `main` tests, deploys the SPA to Cloudflare Pages, publishes the
+server image, and then rolls it out by running `deploy/rollout.sh` on the box
+over SSH through the tunnel. See
+[ADR 0009](docs/adr/0009-ci-rolls-out-over-ssh-through-the-tunnel.md).
+
+The rollout only restarts `api` and `scheduler`. Migrations, and changes to the
+tunnel or the database service, are still applied by hand on the box.
+
+The last step is skipped until it has been wired up, once:
+
+1. **Give CI a key that can only run the script.** Generate one anywhere:
+
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C github-actions -f deploy_key
+   ```
+
+   Put the public half in `~/.ssh/authorized_keys` of the user that owns the
+   checkout on the box, on one line:
+
+   ```text
+   restrict,command="/opt/wikindle/deploy/rollout.sh" ssh-ed25519 AAAA… github-actions
+   ```
+
+2. **Recreate the tunnel** so it can reach the host's sshd:
+   `docker compose up -d tunnel`. sshd has to accept connections from Docker's
+   bridge network; a host firewall may need a rule for it.
+
+3. **In Cloudflare Zero Trust**, add a public hostname to the tunnel —
+   `ssh.wikindle.xyz` → `ssh://host.docker.internal:22` — then create a service
+   token and a self-hosted Access application for that hostname whose only
+   policy is *Service Auth* for that token.
+
+4. **In the GitHub repository**, set:
+
+   | Kind | Name | Value |
+   |---|---|---|
+   | Variable | `DEPLOY_SSH_HOST` | `ssh.wikindle.xyz` |
+   | Variable | `DEPLOY_SSH_USER` | the user from step 1 |
+   | Secret | `DEPLOY_SSH_KEY` | the private half of the key |
+   | Secret | `DEPLOY_SSH_KNOWN_HOSTS` | `ssh.wikindle.xyz ` + the box's `/etc/ssh/ssh_host_ed25519_key.pub` |
+   | Secret | `CF_ACCESS_CLIENT_ID` | the service token's client ID |
+   | Secret | `CF_ACCESS_CLIENT_SECRET` | the service token's client secret |
+
 ## Developing
 
 ```bash
