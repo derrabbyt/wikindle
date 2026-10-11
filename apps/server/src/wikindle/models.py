@@ -36,6 +36,8 @@ class Subscriber:
     kindle_address: str
     status: SubscriberStatus
     timezone: str | None = None
+    interval_days: int = 1
+    article_pool: str = "featured"
     created_at: datetime | None = None
 
 

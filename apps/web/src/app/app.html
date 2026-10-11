@@ -11,12 +11,7 @@
     </p> -->
 
     <form class="form" (ngSubmit)="subscribe()">
-      <label for="kindle">
-        Your Kindle email address
-        <!-- <small>
-          <a href="/help/">Where do I find this?</a>
-        </small> -->
-      </label>
+      <label for="kindle">Your Kindle email address</label>
       <input
         id="kindle"
         name="kindle"
@@ -30,13 +25,26 @@
         (ngModelChange)="kindleAddress.set($event)"
       />
 
-      <div style="display: grid; gap: 0.75rem; margin-top: 1.25rem;">
-        <button
-          type="submit"
-          [disabled]="signupBusy()"
-          style="display: block; width: 100%; min-height: 3rem; margin: 0;"
-        >
+      <label for="interval">How often?</label>
+      <select
+        id="interval"
+        name="interval"
+        [ngModel]="intervalDays()"
+        (ngModelChange)="intervalDays.set($event)"
+      >
+        <option [ngValue]="1">1 day</option>
+        <option [ngValue]="2">Every 2 days</option>
+        <option [ngValue]="3">Every 3 days</option>
+        <option [ngValue]="7">1 week</option>
+        <option [ngValue]="14">Every 2 weeks</option>
+      </select>
+
+      <div class="button-stack">
+        <button type="submit" [disabled]="signupBusy()">
           {{ signupBusy() ? "Subscribing…" : "Subscribe" }}
+        </button>
+        <button type="button" class="secondary" [disabled]="extraBusy()" (click)="sendExtra()">
+          {{ extraBusy() ? "Sending…" : "Send me one now" }}
         </button>
       </div>
 
@@ -51,30 +59,19 @@
       }
     </form>
 
+    <div class="note">
+      <a href="/help/">How to find your Kindle email address →</a>
+    </div>
 
-
-    <!-- <p class="intro">
-      Enter your address above and stop the daily article. You can also just
-      remove <code>read&#64;wikindle.xyz</code> from your Amazon approved list,
-      which works immediately and doesn't depend on us.
-    </p> -->
-    <div style="display: grid; gap: 0.75rem; margin-top: 1.75rem;">
+    <div class="button-stack compact">
       <button
-        type="submit"
+        type="button"
         class="secondary"
         [disabled]="leaveBusy()"
         (click)="unsubscribe()"
-        style="display: block; width: 100%; min-height: 3rem; margin: 0;"
       >
         {{ leaveBusy() ? "Unsubscribing…" : "Unsubscribe" }}
       </button>
-    </div>
-
-    <div class="note">
-  
-<a href="/help/">
-  How to find your Kindle email address and approve a sender →
-</a>
     </div>
 
     @if (leaveOutcome(); as outcome) {

@@ -27,7 +27,11 @@ from wikindle.models import (
 class Repository(Protocol):
     # -- subscribers ------------------------------------------------------
     def create_subscriber(
-        self, kindle_address: str, timezone_name: str | None
+        self,
+        kindle_address: str,
+        timezone_name: str | None,
+        interval_days: int = 1,
+        article_pool: str = "featured",
     ) -> Subscriber: ...
     def subscriber_by_kindle_address(self, kindle_address: str) -> Subscriber | None: ...
     def unsubscribe(self, subscriber_id: int) -> None: ...
@@ -74,20 +78,26 @@ class PostgresRepository:
     # -- subscribers ------------------------------------------------------
 
     def create_subscriber(
-        self, kindle_address: str, timezone_name: str | None
+        self,
+        kindle_address: str,
+        timezone_name: str | None,
+        interval_days: int = 1,
+        article_pool: str = "featured",
     ) -> Subscriber:
         """Idempotent: signing up again reactivates rather than erroring."""
         row = self._one(
             """
-            INSERT INTO subscribers (kindle_address, timezone, status)
-            VALUES (%s, %s, 'active')
+            INSERT INTO subscribers (kindle_address, timezone, status, interval_days, article_pool)
+            VALUES (%s, %s, 'active', %s, %s)
             ON CONFLICT (kindle_address) DO UPDATE
                 SET timezone        = COALESCE(EXCLUDED.timezone, subscribers.timezone),
                     status          = 'active',
+                    interval_days   = EXCLUDED.interval_days,
+                    article_pool    = EXCLUDED.article_pool,
                     unsubscribed_at = NULL
             RETURNING *
             """,
-            (kindle_address, timezone_name),
+            (kindle_address, timezone_name, interval_days, article_pool),
         )
         return _subscriber(row)
 
@@ -316,6 +326,8 @@ def _subscriber(row: dict) -> Subscriber:
         kindle_address=row["kindle_address"],
         status=SubscriberStatus(row["status"]),
         timezone=row.get("timezone"),
+        interval_days=row.get("interval_days", 1),
+        article_pool=row.get("article_pool", "featured"),
         created_at=row.get("created_at"),
     )
 

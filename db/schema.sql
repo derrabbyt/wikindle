@@ -69,6 +69,9 @@ CREATE TABLE IF NOT EXISTS subscribers (
     timezone        TEXT,
     status          TEXT        NOT NULL DEFAULT 'active'
                                 CHECK (status IN ('active', 'unsubscribed')),
+    interval_days   INTEGER     NOT NULL DEFAULT 1 CHECK (interval_days >= 1 AND interval_days <= 30),
+    article_pool    TEXT        NOT NULL DEFAULT 'featured'
+                                CHECK (article_pool IN ('featured', 'good', 'unusual_articles', 'did_you_know', 'vital_articles', 'common_misconceptions', 'featured_articles')),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     unsubscribed_at TIMESTAMPTZ
 );

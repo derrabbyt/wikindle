@@ -105,6 +105,9 @@ class EditionService:
         report = SendReport()
 
         for subscriber in self._repository.active_subscribers():
+            if not self._should_send_for(subscriber, on):
+                report.skipped += 1
+                continue
             if self._repository.delivery_exists(subscriber.id, on):
                 report.skipped += 1
                 continue
@@ -133,6 +136,15 @@ class EditionService:
             report.sent += 1
 
         return report
+
+    def _should_send_for(self, subscriber, on: date) -> bool:
+        interval = max(1, getattr(subscriber, "interval_days", 1))
+        if interval == 1:
+            return True
+        if subscriber.created_at is None:
+            return True
+        offset = (on - subscriber.created_at.date()).days
+        return offset >= 0 and offset % interval == 0
 
 
 def epub_filename(title: str | None) -> str:

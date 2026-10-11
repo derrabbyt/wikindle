@@ -14,6 +14,7 @@ export class App {
   /** The only thing we ask for, and the only thing we store. */
   readonly kindleAddress = signal("");
   readonly extraUrl = signal("");
+  readonly intervalDays = signal(1);
 
   readonly signupBusy = signal(false);
   readonly signupOutcome = signal<Outcome>(null);
@@ -34,6 +35,7 @@ export class App {
       this.post("/api/subscribe", {
         kindle_address: this.kindleAddress().trim(),
         timezone: this.timezone,
+        interval_days: this.intervalDays(),
       }),
     );
   }

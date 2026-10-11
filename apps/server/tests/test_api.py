@@ -72,6 +72,17 @@ def test_subscribing_takes_effect_immediately(context):
     assert repository.subscriber_by_kindle_address(SELINA).timezone == "Europe/Vienna"
 
 
+def test_subscribing_stores_the_chosen_pool_and_interval(context):
+    client, repository, _ = context
+
+    response = subscribe(client, pool="unusual_articles", interval_days=3)
+
+    assert response.status_code == 201
+    subscriber = repository.subscriber_by_kindle_address(SELINA)
+    assert subscriber.article_pool == "unusual_articles"
+    assert subscriber.interval_days == 3
+
+
 def test_the_response_carries_the_approved_sender_instruction(context):
     """It is the only place we can say it: there is no email channel to a human."""
     client, _, _ = context

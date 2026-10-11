@@ -102,6 +102,23 @@ def test_featured_wins_when_an_article_is_in_both_categories():
     assert articles[0].quality == "featured"
 
 
+def test_fetches_the_curated_wikipedia_pool_categories():
+    session = FakeApiSession(
+        {
+            "Category:Unusual articles": [{"query": {"categorymembers": [member("Cat")]}}],
+            "Category:Did you know?": [{"query": {"categorymembers": [member("Dog")]}}],
+        }
+    )
+
+    articles = fetch_quality_articles("en", session)
+
+    assert {a.source_url for a in articles} == {
+        "https://en.wikipedia.org/wiki/Cat",
+        "https://en.wikipedia.org/wiki/Dog",
+    }
+    assert {a.quality for a in articles} == {"unusual_articles", "did_you_know"}
+
+
 def test_a_language_without_configured_categories_is_refused():
     with pytest.raises(UnsupportedLanguage):
         fetch_quality_articles("xx", FakeApiSession({}))

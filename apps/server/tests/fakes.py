@@ -41,13 +41,21 @@ class InMemoryRepository:
 
     # -- subscribers ------------------------------------------------------
 
-    def create_subscriber(self, kindle_address, timezone_name=None) -> Subscriber:
+    def create_subscriber(
+        self,
+        kindle_address,
+        timezone_name=None,
+        interval_days=1,
+        article_pool="featured",
+    ) -> Subscriber:
         existing = self.subscriber_by_kindle_address(kindle_address)
         if existing:
             updated = replace(
                 existing,
                 status=SubscriberStatus.ACTIVE,
                 timezone=timezone_name or existing.timezone,
+                interval_days=interval_days,
+                article_pool=article_pool,
             )
             self.subscribers[existing.id] = updated
             return updated
@@ -57,6 +65,8 @@ class InMemoryRepository:
             kindle_address=kindle_address,
             status=SubscriberStatus.ACTIVE,
             timezone=timezone_name,
+            interval_days=interval_days,
+            article_pool=article_pool,
         )
         self.subscribers[subscriber.id] = subscriber
         return subscriber

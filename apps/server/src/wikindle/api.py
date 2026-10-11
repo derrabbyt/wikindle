@@ -133,6 +133,8 @@ class SubscribeRequest(BaseModel):
     #: Captured from the browser so per-timezone delivery stays possible later
     #: without having to ask every existing Subscriber.
     timezone: str | None = Field(default=None, max_length=64)
+    interval_days: int = Field(default=1, ge=1, le=30)
+    pool: str = Field(default="featured")
 
 
 class AddressRequest(BaseModel):
@@ -182,7 +184,10 @@ def create_app() -> FastAPI:
 
         try:
             SubscriptionService(repository, config).register(
-                body.kindle_address, body.timezone
+                body.kindle_address,
+                body.timezone,
+                body.interval_days,
+                body.pool,
             )
         except ValueError as exc:
             return _error(400, str(exc))

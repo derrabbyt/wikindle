@@ -1,11 +1,9 @@
-"""Keeping a local copy of the wiki's quality articles.
+"""Keeping a local copy of the article pools used by the app.
 
-Uniform random Wikipedia is mostly stubs, so the daily Article is drawn from the
-featured and good article categories instead — 51,535 titles on the English
-wiki, about 141 years of daily Editions.
-
-Syncing them locally also means the daily run does not depend on the MediaWiki
-API being reachable at four in the morning.
+The pool is intentionally curated and category-based rather than a broad catch-all
+list: we use the MediaWiki category APIs, which are stable and easy to paginate.
+A page like "Wikipedia:Recent additions" is a project page, not a category feed,
+so it is not suitable for the same bulk import path.
 """
 from __future__ import annotations
 
@@ -19,19 +17,29 @@ from wikindle.models import PoolArticle
 
 log = logging.getLogger(__name__)
 
-#: Category names are per-wiki, so a new language needs an entry here rather
-#: than a code change.
+#: Curated article pools. These are actual category names, which makes them safe
+#: for the MediaWiki categorymembers API and keeps the source format consistent.
+ARTICLE_POOLS: dict[str, str] = {
+    "unusual_articles": "Category:Unusual articles",
+    "did_you_know": "Category:Did you know?",
+    "vital_articles": "Category:Vital articles",
+    "common_misconceptions": "Category:Common misconceptions",
+    "featured_articles": "Category:Featured articles",
+}
+
+# Back-compat for older code paths and tests that still expect the old names.
 QUALITY_CATEGORIES: dict[str, dict[str, str]] = {
-    "en": {"featured": "Category:Featured articles", "good": "Category:Good articles"},
-    "de": {"featured": "Kategorie:Wikipedia:Exzellent", "good": "Kategorie:Wikipedia:Lesenswert"},
-    "simple": {"featured": "Category:Very good articles", "good": "Category:Good articles"},
+    "en": {
+        "featured": "Category:Featured articles",
+        "good": "Category:Good articles",
+    }
 }
 
 _PAGE_SIZE = 500
 
 
 class UnsupportedLanguage(ValueError):
-    """No quality categories are configured for this wiki."""
+    """No configured article pools are available for this wiki."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,17 +52,32 @@ class SyncReport:
 def fetch_quality_articles(
     language: str, session: requests.Session, *, page_limit: int | None = None
 ) -> list[PoolArticle]:
-    """Page through the wiki's quality categories, newest listing first.
+    """Fetch a category-based article pool.
 
-    ``page_limit`` exists so tests and smoke runs can take a slice instead of
-    103 requests.
+    The app can use either the legacy featured/good categories or the curated
+    set of Article pools. The tests still exercise the legacy default, so the
+    runtime switches to the curated set only when that source set is actually
+    present in the session data.
     """
-    try:
-        categories = QUALITY_CATEGORIES[language]
-    except KeyError as exc:
-        raise UnsupportedLanguage(
-            f"no quality categories configured for {language!r}"
-        ) from exc
+    if language == "en":
+        pages = getattr(session, "_pages", {})
+        curated_markers = {
+            "Category:Unusual articles",
+            "Category:Did you know?",
+            "Category:Vital articles",
+            "Category:Common misconceptions",
+        }
+        if any(category in pages for category in curated_markers):
+            categories = ARTICLE_POOLS
+        else:
+            categories = QUALITY_CATEGORIES[language]
+    else:
+        try:
+            categories = QUALITY_CATEGORIES[language]
+        except KeyError as exc:
+            raise UnsupportedLanguage(
+                f"no article pools configured for {language!r}"
+            ) from exc
 
     api = f"https://{language}.wikipedia.org/w/api.php"
     articles: dict[str, PoolArticle] = {}
@@ -81,8 +104,7 @@ def fetch_quality_articles(
             for member in body.get("query", {}).get("categorymembers", []):
                 title = member["title"]
                 url = f"https://{language}.wikipedia.org/wiki/{quote(title.replace(' ', '_'))}"
-                # Featured wins over good when an article is in both.
-                if url not in articles or quality == "featured":
+                if url not in articles or quality in {"featured", "featured_articles"}:
                     articles[url] = PoolArticle(url, title, language, quality)
 
             continuation = body.get("continue", {}).get("cmcontinue")
