@@ -1,1 +1,2 @@
-/* You can add global styles to this file, and also import other style files */
+/* The shared look lives in public/, where the static help page can link it too. */
+@import "../public/wikindle.css";

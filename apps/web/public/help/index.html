@@ -8,49 +8,35 @@
       name="description"
       content="How to find your Send to Kindle email address, and how to let wikindle send to it."
     />
+    <link
+      rel="preload"
+      href="/fonts/libertinus-serif-latin-400.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="/wikindle.css" />
+    <script src="/theme.js"></script>
     <style>
-      :root {
-        color-scheme: light dark;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        padding: 3rem 1.5rem 5rem;
-        color: #18202a;
-        background: radial-gradient(circle at top left, #f3ede2 0, transparent 38rem),
-          #faf8f4;
-        font-family: ui-serif, Georgia, Cambria, "Times New Roman", serif;
-        line-height: 1.65;
-      }
-      main {
+      /* Colours, type and buttons come from /wikindle.css, shared with the app.
+         Only this page's own layout lives here. */
+      .column {
         max-width: 46rem;
-        margin: 0 auto;
       }
-      .eyebrow {
-        margin-bottom: 0.75rem;
-        color: #9a7b45;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-      }
-      h1 {
-        margin: 0 0 0.75rem;
-        font-size: clamp(1.9rem, 6vw, 2.6rem);
-        line-height: 1.1;
-        letter-spacing: -0.02em;
-      }
+      /* Section headings sit on a rule, as they do in an article. */
       h2 {
-        margin: 3rem 0 0.5rem;
-        font-size: 1.35rem;
-        line-height: 1.25;
+        padding-bottom: 0.2em;
+        border-bottom: 1px solid var(--rule-soft);
       }
       .lede {
-        color: #5b5347;
-        font-size: 1.05rem;
+        margin-top: 1.25rem;
+        font-size: 1.125rem;
+      }
+      .open {
+        margin-top: 2.5rem;
+      }
+      .open p {
+        margin-top: 1rem;
       }
       ol.steps {
         margin: 0;
@@ -59,149 +45,93 @@
         counter-reset: step;
       }
       ol.steps > li {
-        position: relative;
-        margin: 2rem 0 0;
-        padding-left: 3rem;
+        margin-top: 2.75rem;
         counter-increment: step;
       }
-      ol.steps > li::before {
+      /* The steps are a real sequence, so they are numbered, the way an
+         article numbers its sections. */
+      ol.steps h2::before {
         content: counter(step);
-        position: absolute;
-        left: 0;
-        top: 0.1rem;
-        display: grid;
-        place-items: center;
-        width: 2rem;
-        height: 2rem;
-        background: #3b3226;
-        color: #fffdfa;
-        border-radius: 50%;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 0.95rem;
-        font-weight: 700;
+        margin-right: 0.6rem;
+        color: var(--ink-soft);
+      }
+      ol.steps p {
+        margin-top: 0.75rem;
       }
       figure {
-        margin: 1rem 0 0;
+        margin: 1.25rem 0 0;
       }
+      /* Framed like an article thumbnail. The screenshots are of a white page,
+         so the frame stays white in the dark too. */
       figure img {
         display: block;
         width: 100%;
         height: auto;
-        border: 1px solid #e4ddd0;
-        border-radius: 0.6rem;
+        padding: 4px;
         background: #fff;
-      }
-      figcaption {
-        margin-top: 0.5rem;
-        color: #6d6455;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 0.85rem;
+        border: 1px solid var(--rule-soft);
+        border-radius: 2px;
       }
       code {
-        padding: 0.1em 0.4em;
-        background: #f1ece1;
-        border-radius: 0.3em;
-        font-size: 0.95em;
+        font-family: var(--mono);
+        font-size: 0.92em;
       }
       .address {
         display: flex;
-        gap: 0.6rem;
-        align-items: center;
         flex-wrap: wrap;
-        margin: 1rem 0;
+        gap: 0.75rem;
+        align-items: center;
       }
+      ol.steps .address {
+        margin-top: 1rem;
+      }
+      /* Something to copy, so it looks like a field rather than a remark. */
       .address code {
-        padding: 0.55em 0.8em;
-        font-size: 1.05rem;
-      }
-      a.button,
-      button {
-        display: inline-block;
-        padding: 0.7rem 1.1rem;
-        background: #3b3226;
-        color: #fffdfa;
-        border: 0;
-        border-radius: 0.55rem;
-        font-family: ui-sans-serif, system-ui, sans-serif;
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.75rem;
+        padding: 0 0.9rem;
+        background: var(--field);
+        border: 1px solid var(--rule);
+        border-radius: 2px;
         font-size: 1rem;
-        font-weight: 650;
-        text-decoration: none;
-        cursor: pointer;
-      }
-      a.button:hover,
-      button:hover {
-        background: #241d13;
-      }
-      .note {
-        margin: 1rem 0;
-        padding: 1rem 1.1rem;
-        background: #f7f1e4;
-        border-left: 3px solid #c8a86a;
-        border-radius: 0 0.55rem 0.55rem 0;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 0.92rem;
+        user-select: all;
       }
       .muted {
-        color: #6d6455;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 0.9rem;
+        margin-top: 0.75rem;
+        color: var(--ink-soft);
+        font-size: 0.875rem;
       }
       #copied {
-        color: #1d7a4c;
-        font-family: ui-sans-serif, system-ui, sans-serif;
-        font-size: 0.9rem;
-      }
-      footer {
-        margin-top: 4rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid #e4ddd0;
-      }
-      @media (prefers-color-scheme: dark) {
-        body {
-          color: #ece6db;
-          background: radial-gradient(circle at top left, #241f18 0, transparent 38rem),
-            #17150f;
-        }
-        .lede,
-        .muted,
-        figcaption {
-          color: #a9a190;
-        }
-        code,
-        .note {
-          background: #2a2519;
-        }
-        figure img {
-          border-color: #383225;
-        }
-        a.button,
-        button {
-          background: #e0cfa5;
-          color: #17150f;
-        }
-        footer {
-          border-top-color: #383225;
-        }
+        color: var(--ok-rule);
       }
     </style>
   </head>
   <body>
-    <main>
-      <p class="eyebrow"><a href="/" style="color: inherit">← wikindle</a></p>
+    <main class="column">
+      <article class="sheet">
+      <div class="topline">
+        <p class="masthead"><a href="/">← wikindle</a></p>
+        <button type="button" class="quiet theme-toggle" data-theme-toggle>
+          <span class="to-light">Light mode</span>
+          <span class="to-dark">Dark mode</span>
+        </button>
+      </div>
 
       <h1>Setting up your Kindle</h1>
       <p class="lede">
         Two things live in the same Amazon settings page: the address your Kindle
         receives documents at, and the list of senders it will accept them from.
- 
       </p>
 
-      <h2>Open your Amazon settings</h2>
-      <p>
-        <a class="button" id="amazon-link" href="https://www.amazon.com/mycd"
-          >Open Manage Your Content and Devices</a
-        >
-      </p>
+      <section class="open">
+        <h2>Open your Amazon settings</h2>
+        <p>
+          <a class="button" id="amazon-link" href="https://www.amazon.com/mycd"
+            >Open Manage Your Content and Devices</a
+          >
+        </p>
+      </section>
       <!-- <p class="muted" id="region-note">
         This opens amazon.com. If your Amazon account is on another site, use
         that one instead.
@@ -209,7 +139,7 @@
 
       <ol class="steps">
         <li>
-          <h2 style="margin-top: 0">Go to the Preferences tab</h2>
+          <h2>Go to the Preferences tab</h2>
           <p>
             Manage Your Content and Devices opens on <em>Content</em>. Everything
             you need is under <strong>Preferences</strong>.
@@ -224,7 +154,7 @@
         </li>
 
         <li>
-          <h2 style="margin-top: 0">Find your Send to Kindle address</h2>
+          <h2>Find your Send to Kindle address</h2>
           <p>
             Scroll down to <strong>Personal Document Settings</strong>. Under
             <em>Send-to-Kindle E-Mail Settings</em> you'll see one address per
@@ -241,7 +171,7 @@
         </li>
 
         <li>
-          <h2 style="margin-top: 0">Let wikindle send to it</h2>
+          <h2>Let wikindle send to it</h2>
           <p>
             Still on the same page, find
             <strong>Approved Personal Document E-mail List</strong>, click
@@ -249,7 +179,7 @@
           </p>
           <p class="address">
             <code id="sender">read@wikindle.xyz</code>
-            <button type="button" id="copy">Copy</button>
+            <button type="button" class="plain" id="copy">Copy</button>
             <span id="copied" role="status"></span>
           </p>
           <figure>
@@ -262,9 +192,10 @@
         </li>
       </ol>
 
+      </article>
 
-      <footer>
-        <p class="muted">
+      <footer class="footnote">
+        <p>
           Want to stop? Either unsubscribe
           <a href="/">here</a>, or just delete
           <code>read@wikindle.xyz</code> from the approved list above.
@@ -275,8 +206,8 @@
     <script>
       // Amazon accounts are tied to a regional site, and a link to the wrong one
       // lands you on a store you are not signed in to. Guess from the browser's
-      // locale; the note underneath always says which one was chosen so it can
-      // be ignored when the guess is wrong.
+      // locale; the note underneath, when it is in the page, says which one was
+      // chosen so it can be ignored when the guess is wrong.
       var AMAZON_SITES = {
         US: ["amazon.com", "the United States"],
         GB: ["amazon.co.uk", "the United Kingdom"],
@@ -315,7 +246,9 @@
         var site = AMAZON_SITES[detectRegion()];
         var link = document.getElementById("amazon-link");
         link.href = "https://www." + site[0] + "/mycd";
-        document.getElementById("region-note").innerHTML =
+        var note = document.getElementById("region-note");
+        if (!note) return;
+        note.innerHTML =
           "This opens <strong>" +
           site[0] +
           "</strong>, based on your browser's language settings (" +

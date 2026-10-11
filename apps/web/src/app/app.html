@@ -1,80 +1,60 @@
-<main class="page">
-  <section class="card">
-    <div class="eyebrow">wikindle</div>
+<main class="column">
+  <section class="sheet">
+  <div class="topline">
+    <div class="masthead">wikindle</div>
+    <button type="button" class="quiet theme-toggle" data-theme-toggle>
+      <span class="to-light">Light mode</span>
+      <span class="to-dark">Dark mode</span>
+    </button>
+  </div>
 
-    <h1>One Wikipedia article a day, on your Kindle</h1>
+  <h1>One Wikipedia article a day, on your Kindle</h1>
 
-    <!-- <p class="intro">
-      Every morning, one well-written Wikipedia article — drawn from the featured
-      and good article pool, never a stub — converted to a properly formatted
-      EPUB and delivered to your Kindle.
-    </p> -->
+  <!-- <p class="intro">
+    Every morning, one well-written Wikipedia article — drawn from the featured
+    and good article pool, never a stub — converted to a properly formatted
+    EPUB and delivered to your Kindle.
+  </p> -->
 
-    <form class="form" (ngSubmit)="subscribe()">
-      <label for="kindle">Your Kindle email address</label>
-      <input
-        id="kindle"
-        name="kindle"
-        type="email"
-        required
-        autocomplete="off"
-        autocapitalize="none"
-        spellcheck="false"
-        placeholder="yourname_aBcDeF@kindle.com"
-        [ngModel]="kindleAddress()"
-        (ngModelChange)="kindleAddress.set($event)"
-      />
+  <form class="form" (ngSubmit)="subscribe()">
+    <label for="kindle">Your Kindle email address</label>
+    <input
+      id="kindle"
+      name="kindle"
+      type="email"
+      required
+      autocomplete="off"
+      autocapitalize="none"
+      spellcheck="false"
+      placeholder="yourname_aBcDeF@kindle.com"
+      [ngModel]="kindleAddress()"
+      (ngModelChange)="kindleAddress.set($event)"
+    />
 
-      <label for="interval">How often?</label>
-      <select
-        id="interval"
-        name="interval"
-        [ngModel]="intervalDays()"
-        (ngModelChange)="intervalDays.set($event)"
-      >
-        <option [ngValue]="1">1 day</option>
-        <option [ngValue]="2">Every 2 days</option>
-        <option [ngValue]="3">Every 3 days</option>
-        <option [ngValue]="7">1 week</option>
-        <option [ngValue]="14">Every 2 weeks</option>
-      </select>
+    <label for="interval">How often?</label>
+    <select
+      id="interval"
+      name="interval"
+      [ngModel]="intervalDays()"
+      (ngModelChange)="intervalDays.set($event)"
+    >
+      <option [ngValue]="1">1 day</option>
+      <option [ngValue]="2">Every 2 days</option>
+      <option [ngValue]="3">Every 3 days</option>
+      <option [ngValue]="7">1 week</option>
+      <option [ngValue]="14">Every 2 weeks</option>
+    </select>
 
-      <div class="button-stack">
-        <button type="submit" [disabled]="signupBusy()">
-          {{ signupBusy() ? "Subscribing…" : "Subscribe" }}
-        </button>
-        <button type="button" class="secondary" [disabled]="extraBusy()" (click)="sendExtra()">
-          {{ extraBusy() ? "Sending…" : "Send me one now" }}
-        </button>
-      </div>
-
-      @if (signupOutcome(); as outcome) {
-        <p
-          class="message"
-          [class.error]="outcome.kind === 'error'"
-          [attr.role]="outcome.kind === 'error' ? 'alert' : 'status'"
-        >
-          {{ outcome.message }}
-        </p>
-      }
-    </form>
-
-    <div class="note">
-      <a href="/help/">How to find your Kindle email address →</a>
-    </div>
-
-    <div class="button-stack compact">
-      <button
-        type="button"
-        class="secondary"
-        [disabled]="leaveBusy()"
-        (click)="unsubscribe()"
-      >
-        {{ leaveBusy() ? "Unsubscribing…" : "Unsubscribe" }}
+    <div class="actions">
+      <button type="submit" [disabled]="signupBusy()">
+        {{ signupBusy() ? "Subscribing…" : "Subscribe" }}
+      </button>
+      <button type="button" class="plain" [disabled]="extraBusy()" (click)="sendExtra()">
+        {{ extraBusy() ? "Sending…" : "Send me one now" }}
       </button>
     </div>
 
-    @if (leaveOutcome(); as outcome) {
+    @if (signupOutcome(); as outcome) {
       <p
         class="message"
         [class.error]="outcome.kind === 'error'"
@@ -83,9 +63,46 @@
         {{ outcome.message }}
       </p>
     }
+
+    @if (extraOutcome(); as outcome) {
+      <p
+        class="message"
+        [class.error]="outcome.kind === 'error'"
+        [attr.role]="outcome.kind === 'error' ? 'alert' : 'status'"
+      >
+        {{ outcome.message }}
+      </p>
+    }
+
+  </form>
+
+  <div class="notice">
+    <a href="/help/">How to find your Kindle email address →</a>
+  </div>
+
+  <div class="actions">
+    <button
+      type="button"
+      class="plain"
+      [disabled]="leaveBusy()"
+      (click)="unsubscribe()"
+    >
+      {{ leaveBusy() ? "Unsubscribing…" : "Unsubscribe" }}
+    </button>
+  </div>
+
+  @if (leaveOutcome(); as outcome) {
+    <p
+      class="message"
+      [class.error]="outcome.kind === 'error'"
+      [attr.role]="outcome.kind === 'error' ? 'alert' : 'status'"
+    >
+      {{ outcome.message }}
+    </p>
+  }
   </section>
 
-  <!-- <section class="card">
+  <!-- <section>
     <h2>Want one right now?</h2>
     <p class="intro">
       Already subscribed? Get an extra article immediately, using the address
@@ -109,24 +126,10 @@
       <button type="submit" [disabled]="extraBusy()">
         {{ extraBusy() ? "Sending…" : "Send it to my Kindle" }}
       </button>
-
-      @if (extraOutcome(); as outcome) {
-        <p
-          class="message"
-          [class.error]="outcome.kind === 'error'"
-          [attr.role]="outcome.kind === 'error' ? 'alert' : 'status'"
-        >
-          {{ outcome.message }}
-        </p>
-      }
     </form>
   </section> -->
 
-  <!-- <section class="card quiet">
-
-  </section> -->
-
-  <footer class="footer">
+  <footer class="footnote">
     Article text comes from Wikipedia and is available under CC BY-SA 4.0.
   </footer>
 </main>

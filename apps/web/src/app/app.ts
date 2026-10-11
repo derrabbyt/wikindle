@@ -64,7 +64,11 @@ export class App {
     action: () => Promise<Outcome>,
   ): Promise<void> {
     busy.set(true);
-    outcome.set(null);
+    // One message at a time: whatever the last action said is stale the moment
+    // another one starts, whichever button it came from.
+    this.signupOutcome.set(null);
+    this.extraOutcome.set(null);
+    this.leaveOutcome.set(null);
     try {
       outcome.set(await action());
     } finally {
