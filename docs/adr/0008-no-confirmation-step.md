@@ -49,4 +49,5 @@ stopping them is the less harmful of the two. A Subscriber also has a kill
 switch we cannot override: removing our address from their approved list stops
 delivery instantly.
 
-`db/migrations/0001-drop-confirmation.sql` applies this to an existing database.
+`apps/server/src/wikindle/migrations/0001-drop-confirmation.sql` applies this to
+an existing database.

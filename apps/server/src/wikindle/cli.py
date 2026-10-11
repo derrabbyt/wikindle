@@ -4,6 +4,7 @@
     python -m wikindle build         # evening: build the Editions buffer
     python -m wikindle send          # 04:00 UTC: fan today's Edition out
     python -m wikindle scheduler     # all of the above, on a loop
+    python -m wikindle migrate       # on every start: apply pending migrations
 
     python -m wikindle send-test --to you@kindle.com   # smoke test, no database
 """
@@ -24,6 +25,7 @@ from wikindle.config import Settings, settings as load_settings
 from wikindle.convert import convert_article
 from wikindle.convert.pipeline import USER_AGENT
 from wikindle.mail import Mailer, Message, RecordingMailer, ResendMailer
+from wikindle.migrate import apply_migrations
 from wikindle.pool import sync_pool
 from wikindle.repository import PostgresRepository
 from wikindle.services.conversions import ConversionService
@@ -139,12 +141,20 @@ def command_send_test(config: Settings, to: str, url: str | None = None) -> int:
     return 0
 
 
+def command_migrate(config: Settings) -> int:
+    ran = apply_migrations(config.database_url)
+    log.info("migrations: %d applied", len(ran))
+    return 0
+
+
 def command_scheduler(config: Settings) -> int:
     """Run the jobs on a loop, checking once a minute.
 
     A loop rather than cron: it keeps the schedule in the same place as the code
     that implements it, and there is only one box to run it on.
     """
+    command_migrate(config)
+
     last_run: dict[str, str] = {}
 
     while True:
@@ -176,7 +186,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser = argparse.ArgumentParser(prog="wikindle")
     parser.add_argument(
-        "command", choices=["sync-pool", "build", "send", "send-test", "scheduler"]
+        "command",
+        choices=["sync-pool", "build", "send", "send-test", "scheduler", "migrate"],
     )
     parser.add_argument("--date", help="YYYY-MM-DD, for send")
     parser.add_argument("--to", help="Kindle address, for send-test")
@@ -196,6 +207,8 @@ def main(argv: list[str] | None = None) -> int:
         if not arguments.to:
             parser.error("send-test needs --to <your>@kindle.com")
         return command_send_test(config, arguments.to, arguments.url)
+    if arguments.command == "migrate":
+        return command_migrate(config)
     return command_scheduler(config)
 
 

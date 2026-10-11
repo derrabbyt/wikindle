@@ -51,8 +51,8 @@ jobs:
         working-directory: apps/server
 
       - name: Run the test suite
-        # Includes the integration tests, which apply db/schema.sql to a real
-        # PostgreSQL and exercise the SQL the fakes cannot.
+        # Includes the integration tests, which apply db/schema.sql and every
+        # migration to a real PostgreSQL and exercise the SQL the fakes cannot.
         env:
           WIKINDLE_TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/postgres
         run: pytest -q

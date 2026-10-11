@@ -48,4 +48,5 @@ USER wikindle
 ENV WIKINDLE_STORAGE_DIR=/var/lib/wikindle/epub
 
 EXPOSE 8000
-CMD ["uvicorn", "wikindle.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Migrate first, so the API never serves against a schema older than its code.
+CMD ["sh", "-c", "python -m wikindle migrate && exec uvicorn wikindle.api:app --host 0.0.0.0 --port 8000"]

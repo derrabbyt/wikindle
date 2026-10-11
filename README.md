@@ -32,7 +32,7 @@ inbound connection from the internet. See
 | `apps/server/` | Python: API, converter, jobs. The whole backend. |
 | `apps/web/` | Angular SPA, deployed to Cloudflare Pages. |
 | `db/schema.sql` | The database, applied on first start. |
-| `db/migrations/` | Applied by hand — `schema.sql` only runs on an empty volume. |
+| `apps/server/src/wikindle/migrations/` | Changes to an existing database, applied on startup — `schema.sql` only runs on an empty volume. |
 | `docs/adr/` | Why things are the way they are. |
 
 ## Running it
@@ -77,8 +77,14 @@ server image, and then rolls it out by running `deploy/rollout.sh` on the box
 over SSH through the tunnel. See
 [ADR 0009](docs/adr/0009-ci-rolls-out-over-ssh-through-the-tunnel.md).
 
-The rollout only restarts `api` and `scheduler`. Migrations, and changes to the
-tunnel or the database service, are still applied by hand on the box.
+The rollout only restarts `api` and `scheduler`; changes to the tunnel or the
+database service are still applied by hand on the box.
+
+A schema change travels with the code that needs it: add a `.sql` file to
+`apps/server/src/wikindle/migrations/` and both services apply it when they
+start, before serving anything. A migration must also be harmless on a fresh
+database, which gets `db/schema.sql` first and every migration after — see
+[ADR 0010](docs/adr/0010-migrations-apply-on-startup.md).
 
 The last step is skipped until it has been wired up, once:
 

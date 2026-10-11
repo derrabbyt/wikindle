@@ -41,6 +41,8 @@ which is root on the box if the forced command is ever removed.
 
 The tunnel and the database are deliberately out of the script's reach — the SSH
 session rides the tunnel container, so recreating it mid-rollout would cut the
-rollout off. Changes to those two, and every migration, are still applied by
-hand. An image that needs a schema change will now roll out before anyone has
-applied it.
+rollout off. Changes to those two are still applied by hand.
+
+Migrations were applied by hand too when this was written, which meant an image
+that needed a schema change rolled out before anyone had applied it. That
+happened within hours; ADR 0010 is the fix.
