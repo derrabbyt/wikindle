@@ -4,20 +4,18 @@
 
     <h1>One Wikipedia article a day, on your Kindle</h1>
 
-    <p class="intro">
+    <!-- <p class="intro">
       Every morning, one well-written Wikipedia article — drawn from the featured
       and good article pool, never a stub — converted to a properly formatted
       EPUB and delivered to your Kindle.
-    </p>
+    </p> -->
 
     <form class="form" (ngSubmit)="subscribe()">
       <label for="kindle">
-        Your Send to Kindle address
-        <small>
-          Ends in <code>&#64;kindle.com</code>, and is <strong>not</strong> the
-          email you log in to Amazon with. Capitals matter — copy it exactly.
+        Your Kindle email address
+        <!-- <small>
           <a href="/help/">Where do I find this?</a>
-        </small>
+        </small> -->
       </label>
       <input
         id="kindle"
@@ -32,9 +30,15 @@
         (ngModelChange)="kindleAddress.set($event)"
       />
 
-      <button type="submit" [disabled]="signupBusy()">
-        {{ signupBusy() ? "Subscribing…" : "Send me an article a day" }}
-      </button>
+      <div style="display: grid; gap: 0.75rem; margin-top: 1.25rem;">
+        <button
+          type="submit"
+          [disabled]="signupBusy()"
+          style="display: block; width: 100%; min-height: 3rem; margin: 0;"
+        >
+          {{ signupBusy() ? "Subscribing…" : "Subscribe" }}
+        </button>
+      </div>
 
       @if (signupOutcome(); as outcome) {
         <p
@@ -47,17 +51,44 @@
       }
     </form>
 
-    <div class="note">
-      <strong>One step Amazon makes you do yourself.</strong> Your Kindle only
-      accepts documents from senders you have approved, so you need to add
-      <code>read&#64;wikindle.xyz</code> to your Approved Personal Document
-      E-mail List. Until you do, everything we send is discarded — and Amazon
-      tells nobody, so neither of us can see it happening.
-      <a href="/help/">Step-by-step, with screenshots →</a>
+
+
+    <!-- <p class="intro">
+      Enter your address above and stop the daily article. You can also just
+      remove <code>read&#64;wikindle.xyz</code> from your Amazon approved list,
+      which works immediately and doesn't depend on us.
+    </p> -->
+    <div style="display: grid; gap: 0.75rem; margin-top: 1.75rem;">
+      <button
+        type="submit"
+        class="secondary"
+        [disabled]="leaveBusy()"
+        (click)="unsubscribe()"
+        style="display: block; width: 100%; min-height: 3rem; margin: 0;"
+      >
+        {{ leaveBusy() ? "Unsubscribing…" : "Unsubscribe" }}
+      </button>
     </div>
+
+    <div class="note">
+  
+<a href="/help/">
+  How to find your Kindle email address and approve a sender →
+</a>
+    </div>
+
+    @if (leaveOutcome(); as outcome) {
+      <p
+        class="message"
+        [class.error]="outcome.kind === 'error'"
+        [attr.role]="outcome.kind === 'error' ? 'alert' : 'status'"
+      >
+        {{ outcome.message }}
+      </p>
+    }
   </section>
 
-  <section class="card">
+  <!-- <section class="card">
     <h2>Want one right now?</h2>
     <p class="intro">
       Already subscribed? Get an extra article immediately, using the address
@@ -92,32 +123,13 @@
         </p>
       }
     </form>
-  </section>
+  </section> -->
 
-  <section class="card quiet">
-    <h2>Had enough?</h2>
-    <p class="intro">
-      Enter your address above and stop the daily article. You can also just
-      remove <code>read&#64;wikindle.xyz</code> from your Amazon approved list,
-      which works immediately and doesn't depend on us.
-    </p>
-    <button type="button" class="secondary" [disabled]="leaveBusy()" (click)="unsubscribe()">
-      {{ leaveBusy() ? "Stopping…" : "Stop sending me articles" }}
-    </button>
+  <!-- <section class="card quiet">
 
-    @if (leaveOutcome(); as outcome) {
-      <p
-        class="message"
-        [class.error]="outcome.kind === 'error'"
-        [attr.role]="outcome.kind === 'error' ? 'alert' : 'status'"
-      >
-        {{ outcome.message }}
-      </p>
-    }
-  </section>
+  </section> -->
 
   <footer class="footer">
-    Article text comes from Wikipedia and is available under CC BY-SA 4.0. The
-    only thing we store is your Kindle address and a log of what we sent to it.
+    Article text comes from Wikipedia and is available under CC BY-SA 4.0.
   </footer>
 </main>
